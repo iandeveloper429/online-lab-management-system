@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Teacher Dashboard</title>
+  <link rel="stylesheet" href="CSS/style.css">
+</head>
+<body>
+  <nav class="sidebar">
+    <div class="logo">🧠 LabSystem</div>
+    <ul>
+      <li class="active"><a href="#" data-section="dashboard">Dashboard</a></li>
+      <li><a href="#" data-section="myClasses">My Classes</a></li>
+      <li><a href="#" data-section="profile">Profile</a></li>
+      <li><a href="#" id="logoutBtn">Logout</a></li>
+    </ul>
+  </nav>
+
+  <div class="main-content">
+    <div class="profile-name">Welcome, <span id="userName"></span></div>
+
+    <!-- Dashboard Section -->
+    <section id="dashboardSection" class="dashboard-section active">
+      <h3>Your Assigned Class</h3>
+      <div id="assignedClass"></div>
+
+      <h3>Current Lessons</h3>
+      <table id="currentLessons">
+        <thead>
+          <tr><th>Date</th><th>Class</th><th>Project</th><th>Lesson #</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+
+      <h3>Next Lessons</h3>
+      <table id="nextLesson">
+        <thead>
+          <tr><th>Date</th><th>Class</th><th>Project</th><th>Lesson #</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+
+      <h3>Submit Lab Info</h3>
+      <form id="teacherInputForm">
+        <input type="text" name="class_name" placeholder="Class Name" required>
+        <input type="text" name="project_name" placeholder="Project Name" required>
+        <button type="submit">Submit</button>
+      </form>
+    </section>
+
+    <!-- My Classes Section -->
+    <section id="myClassesSection" class="dashboard-section">
+      <h3>My Classes</h3>
+      <table id="myClassesTable">
+        <thead>
+          <tr><th>Class</th><th>Color</th><th>Students</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <!-- Profile Section -->
+    <section id="profileSection" class="dashboard-section">
+      <h3>Profile</h3>
+      <img id="profilePic" src="images/default-profile.png" alt="Profile Picture" width="120">
+      <input type="file" id="uploadProfile" accept="image/*">
+      <button id="updateProfileBtn">Update Profile Picture</button>
+    </section>
+  </div>
+
+  <script type="module" src="JAVASCRIPT/teacher.js"></script>
+
+
+  <script>
+    const loggedInUser = JSON.parse(localStorage.getItem('loggedInUser'));
+if (!loggedInUser || loggedInUser.role !== 'teacher') {
+  alert('Access denied. Please log in as a teacher.');
+  window.location.href = 'login.html';
+  return;
+}
+
+  </script>
+</body>
+</html>

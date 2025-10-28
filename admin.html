@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin Dashboard</title>
+  <link rel="stylesheet" href="CSS/admin.css">
+</head>
+<body>
+  <h2>👨‍💼 Admin Dashboard</h2>
+  <p>Welcome, <span id="adminName"></span></p>
+
+  <h3>Registered Teachers</h3>
+  <table border="1" id="teachersTable">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Email</th>
+        <th>Phone</th>
+        <th>Class</th>
+        <th>Time</th>
+        <th>Assign</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <h3>All Teacher Lessons</h3>
+  <table border="1" id="teacherLessonsTable">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Date</th>
+        <th>Class</th>
+        <th>Time</th>
+        <th>Teacher</th>
+        <th>Project</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <button id="logoutBtn">Logout</button>
+  <button id="viewDashboardBtn">View Dashboard</button>
+
+  <script type="module" src="JAVASCRIPT/admin.js"></script>
+
+  <script>
+    const loggedInUser = JSON.parse(localStorage.getItem('loggedInUser'));
+if (!loggedInUser || loggedInUser.role !== 'teacher') {
+  alert('Access denied. Please log in as a teacher.');
+  window.location.href = 'login.html';
+  return;
+}
+
+  </script>
+</body>
+</html>
