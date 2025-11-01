@@ -24,28 +24,23 @@
       <h3>Your Assigned Class</h3>
       <div id="assignedClass"></div>
 
-      <h3>Current Lessons</h3>
-      <table id="currentLessons">
-        <thead>
-          <tr><th>Date</th><th>Class</th><th>Project</th><th>Lesson #</th></tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-
-      <h3>Next Lessons</h3>
-      <table id="nextLesson">
-        <thead>
-          <tr><th>Date</th><th>Class</th><th>Project</th><th>Lesson #</th></tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-
       <h3>Submit Lab Info</h3>
       <form id="teacherInputForm">
         <input type="text" name="class_name" placeholder="Class Name" required>
         <input type="text" name="project_name" placeholder="Project Name" required>
-        <button type="submit">Submit</button>
+        <input type="number" name="lesson_number" placeholder="Lesson Number" required>
+        <input type="time" name="start_time" required>
+        <input type="time" name="end_time" required>
+        <button type="submit">Submit Lesson</button>
       </form>
+
+      <h3>My Submitted Lessons</h3>
+      <table id="submittedLessons">
+        <thead>
+          <tr><th>Date</th><th>Class</th><th>Project</th><th>Lesson #</th><th>Status</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
     </section>
 
     <!-- My Classes Section -->
@@ -53,7 +48,7 @@
       <h3>My Classes</h3>
       <table id="myClassesTable">
         <thead>
-          <tr><th>Class</th><th>Color</th><th>Students</th></tr>
+          <tr><th>Class</th><th>Time</th></tr>
         </thead>
         <tbody></tbody>
       </table>
@@ -69,16 +64,5 @@
   </div>
 
   <script type="module" src="JAVASCRIPT/teacher.js"></script>
-
-
-  <script>
-    const loggedInUser = JSON.parse(localStorage.getItem('loggedInUser'));
-if (!loggedInUser || loggedInUser.role !== 'teacher') {
-  alert('Access denied. Please log in as a teacher.');
-  window.location.href = 'login.html';
-  return;
-}
-
-  </script>
 </body>
 </html>
