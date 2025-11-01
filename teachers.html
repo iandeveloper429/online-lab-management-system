@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Teacher Dashboard</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <link rel="stylesheet" href="CSS/style.css">
 </head>
 <body>
@@ -24,20 +25,24 @@
       <h3>Your Assigned Class</h3>
       <div id="assignedClass"></div>
 
+      <h3>Messages from Admin</h3>
+      <div id="messagesList" style="margin-bottom:16px;"></div>
+
       <h3>Submit Lab Info</h3>
       <form id="teacherInputForm">
         <input type="text" name="class_name" placeholder="Class Name" required>
         <input type="text" name="project_name" placeholder="Project Name" required>
-        <input type="number" name="lesson_number" placeholder="Lesson Number" required>
+        <input type="number" name="lesson_number" placeholder="Lesson Number (1-10)" min="1" max="10" required>
         <input type="time" name="start_time" required>
         <input type="time" name="end_time" required>
+        <label><input type="checkbox" name="is_lab" value="1"> This is a LAB (double lesson)</label>
         <button type="submit">Submit Lesson</button>
       </form>
 
       <h3>My Submitted Lessons</h3>
       <table id="submittedLessons">
         <thead>
-          <tr><th>Date</th><th>Class</th><th>Project</th><th>Lesson #</th><th>Status</th></tr>
+          <tr><th>Date</th><th>Class</th><th>Project</th><th>Lesson #</th><th>Time</th><th>Status</th></tr>
         </thead>
         <tbody></tbody>
       </table>
@@ -45,10 +50,11 @@
 
     <!-- My Classes Section -->
     <section id="myClassesSection" class="dashboard-section">
-      <h3>My Classes</h3>
-      <table id="myClassesTable">
+      <h3>Assigned Lessons / Timetable</h3>
+      <div id="assignedClassOverview" style="margin-bottom:12px;"></div>
+      <table id="assignedLessonsTable">
         <thead>
-          <tr><th>Class</th><th>Time</th></tr>
+          <tr><th>Date</th><th>Class</th><th>Project</th><th>Lesson #</th><th>Time</th><th>Notes</th></tr>
         </thead>
         <tbody></tbody>
       </table>
@@ -57,9 +63,12 @@
     <!-- Profile Section -->
     <section id="profileSection" class="dashboard-section">
       <h3>Profile</h3>
-      <img id="profilePic" src="images/default-profile.png" alt="Profile Picture" width="120">
-      <input type="file" id="uploadProfile" accept="image/*">
-      <button id="updateProfileBtn">Update Profile Picture</button>
+      <div class="profile-container">
+        <img id="profilePic" src="images/default-profile.png" alt="Profile Picture" width="120" class="profile-img">
+        <input type="file" id="uploadProfile" accept="image/*">
+        <button id="updateProfileBtn">Update Profile Picture</button>
+        <div id="profileInfo" style="margin-top:8px;"></div>
+      </div>
     </section>
   </div>
 
