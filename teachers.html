@@ -7,6 +7,8 @@
   <link rel="stylesheet" href="CSS/style.css">
 </head>
 <body>
+  <div class="background-overlay"></div>
+
   <nav class="sidebar">
     <div class="logo">🧠 LabSystem</div>
     <ul>
@@ -17,60 +19,68 @@
     </ul>
   </nav>
 
-  <div class="main-content">
-    <div class="profile-name">Welcome, <span id="userName"></span></div>
+  <main class="main-content">
+    <div class="profile-header">
+      <h2>Welcome, <span id="userName"></span></h2>
+    </div>
 
-    <!-- Dashboard Section -->
-    <section id="dashboardSection" class="dashboard-section active">
-      <h3>Your Assigned Class</h3>
-      <div id="assignedClass"></div>
+    <!-- DASHBOARD -->
+    <section id="dashboardSection" class="dashboard-section active fadeIn">
+      <h3>📚 Your Assigned Class</h3>
+      <div id="assignedClass" class="card"></div>
 
-      <h3>Messages from Admin</h3>
-      <div id="messagesList" style="margin-bottom:16px;"></div>
+      <h3>💬 Messages from Admin</h3>
+      <div id="messagesList" class="card"></div>
 
-      <h3>Submit Lab Info</h3>
-      <form id="teacherInputForm">
+      <h3>🧾 Submit Lab Info</h3>
+      <form id="teacherInputForm" class="card form-card">
         <input type="text" name="class_name" placeholder="Class Name" required>
         <input type="text" name="project_name" placeholder="Project Name" required>
         <input type="number" name="lesson_number" placeholder="Lesson Number (1-10)" min="1" max="10" required>
-        <input type="time" name="start_time" required>
-        <input type="time" name="end_time" required>
+        <div class="time-group">
+          <input type="time" name="start_time" required>
+          <input type="time" name="end_time" required>
+        </div>
         <label><input type="checkbox" name="is_lab" value="1"> This is a LAB (double lesson)</label>
-        <button type="submit">Submit Lesson</button>
+        <button type="submit" class="btn-primary">Submit Lesson</button>
       </form>
 
-      <h3>My Submitted Lessons</h3>
-      <table id="submittedLessons">
-        <thead>
-          <tr><th>Date</th><th>Class</th><th>Project</th><th>Lesson #</th><th>Time</th><th>Status</th></tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </section>
-
-    <!-- My Classes Section -->
-    <section id="myClassesSection" class="dashboard-section">
-      <h3>Assigned Lessons / Timetable</h3>
-      <div id="assignedClassOverview" style="margin-bottom:12px;"></div>
-      <table id="assignedLessonsTable">
-        <thead>
-          <tr><th>Date</th><th>Class</th><th>Project</th><th>Lesson #</th><th>Time</th><th>Notes</th></tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </section>
-
-    <!-- Profile Section -->
-    <section id="profileSection" class="dashboard-section">
-      <h3>Profile</h3>
-      <div class="profile-container">
-        <img id="profilePic" src="images/default-profile.png" alt="Profile Picture" width="120" class="profile-img">
-        <input type="file" id="uploadProfile" accept="image/*">
-        <button id="updateProfileBtn">Update Profile Picture</button>
-        <div id="profileInfo" style="margin-top:8px;"></div>
+      <h3>🗂 My Submitted Lessons</h3>
+      <div class="table-container">
+        <table id="submittedLessons">
+          <thead>
+            <tr><th>Date</th><th>Class</th><th>Project</th><th>Lesson #</th><th>Time</th><th>Status</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
       </div>
     </section>
-  </div>
+
+    <!-- MY CLASSES -->
+    <section id="myClassesSection" class="dashboard-section fadeIn">
+      <h3>📆 Assigned Lessons / Timetable</h3>
+      <div id="assignedClassOverview" class="card"></div>
+      <div class="table-container">
+        <table id="assignedLessonsTable">
+          <thead>
+            <tr><th>Date</th><th>Class</th><th>Project</th><th>Lesson #</th><th>Time</th><th>Notes</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- PROFILE -->
+    <section id="profileSection" class="dashboard-section fadeIn">
+      <h3>👤 Profile</h3>
+      <div class="profile-container card">
+        <img id="profilePic" src="images/default-profile.png" alt="Profile Picture" class="profile-img">
+        <input type="file" id="uploadProfile" accept="image/*">
+        <button id="updateProfileBtn" class="btn-primary">Update Profile Picture</button>
+        <div id="profileInfo"></div>
+      </div>
+    </section>
+  </main>
 
   <script type="module" src="JAVASCRIPT/teacher.js"></script>
 </body>
