@@ -15,11 +15,12 @@ const firebaseConfig = {
   apiKey: "AIzaSyDe9fXCUSpTFw0VSq_ppzRqOjhkCDIHDXY",
   authDomain: "lab-management-system-9a96e.firebaseapp.com",
   projectId: "lab-management-system-9a96e",
-  storageBucket: "lab-management-system-9a96e.firebasestorage.app",
+  storageBucket: "lab-management-system-9a96e.appspot.com",
   messagingSenderId: "460300647867",
   appId: "1:460300647867:web:2a626aced15605dd63989e",
   measurementId: "G-H66GY777NK"
 };
+
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
