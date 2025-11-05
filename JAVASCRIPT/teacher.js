@@ -185,8 +185,53 @@ function loadAssignedLessons() {
 }
 
 // ====== LOAD MESSAGES (where to == teacher email OR 'all') ======
+// ====== LOAD MESSAGES (Admin → Teacher or Everyone) ======
+// ====== LOAD MESSAGES (Admin → Teacher or Everyone) ======
 function loadMessages() {
   if (!currentEmail) return;
+
+  // teacher should receive:
+  // 1) Direct messages (to = teacherEmail)
+  // 2) Group messages (to = "teachers")
+  // 3) Broadcast messages (to = "all")
+  const q = query(
+    collection(db, "messages"),
+    where("to", "in", [currentEmail, "teachers", "all"]),
+    orderBy("date", "desc")
+  );
+
+  onSnapshot(q, (snapshot) => {
+    messagesListEl.innerHTML = "";
+
+    if (snapshot.empty) {
+      messagesListEl.innerHTML = "<p>No messages yet.</p>";
+      appendReplyForm();
+      return;
+    }
+
+    snapshot.forEach(docSnap => {
+      const m = docSnap.data();
+      const from = m.fromName || m.from || "Admin";
+      const messageText = m.content || m.message || "";
+      const messageDate = m.date ? new Date(m.date).toLocaleString() : "";
+
+      const card = document.createElement("div");
+      card.className = "message-card";
+      card.innerHTML = `
+        <p><strong>${from}</strong></p>
+        <p>${messageText}</p>
+        <small>${messageDate}</small>
+      `;
+      messagesListEl.appendChild(card);
+    });
+
+    appendReplyForm();
+  }, err => {
+    console.error("Messages listener error:", err);
+  });
+}
+
+
 
   // Firestore 'in' query: to in [currentEmail, 'all']
   const recipients = [currentEmail, "all"];
@@ -235,7 +280,7 @@ function loadMessages() {
       appendReplyForm();
     }, e => console.error("Fallback messages listener error:", e));
   });
-}
+
 
 // helper to add reply form under messages (only once)
 function appendReplyForm() {
