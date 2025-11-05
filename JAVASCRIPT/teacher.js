@@ -1,4 +1,4 @@
-// ===== IMPORT FIREBASE MODULES =====
+// JAVASCRIPT/teachers.js
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
 import {
   getAuth,
@@ -12,9 +12,10 @@ import {
   collection,
   query,
   where,
-  getDocs,
+  onSnapshot,
   addDoc,
-  serverTimestamp
+  setDoc,
+  orderBy
 } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 import {
   getStorage,
@@ -23,7 +24,7 @@ import {
   getDownloadURL
 } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-storage.js";
 
-// ====== FIREBASE CONFIG ======
+// ====== FIREBASE CONFIG (your project) ======
 const firebaseConfig = {
   apiKey: "AIzaSyDe9fXCUSpTFw0VSq_ppzRqOjhkCDIHDXY",
   authDomain: "lab-management-system-9a96e.firebaseapp.com",
@@ -52,143 +53,318 @@ const uploadProfileEl = document.getElementById("uploadProfile");
 const updateProfileBtn = document.getElementById("updateProfileBtn");
 const logoutBtn = document.getElementById("logoutBtn");
 
-// ====== NAVIGATION ======
-document.querySelectorAll(".sidebar a[data-section]").forEach(link => {
-  link.addEventListener("click", e => {
-    e.preventDefault();
-    document.querySelectorAll(".sidebar li").forEach(li => li.classList.remove("active"));
-    e.target.parentElement.classList.add("active");
+const teacherInputForm = document.getElementById("teacherInputForm");
 
-    const section = e.target.dataset.section;
-    document.querySelectorAll(".dashboard-section").forEach(sec => sec.classList.remove("active"));
-    document.getElementById(`${section}Section`).classList.add("active");
-  });
-});
+let currentUser = null;
+let currentEmail = null;
 
-// ====== AUTHENTICATION STATE ======
+// ====== NAV (already in your html) ======
+// (sidebar nav event listeners are in your page's script — no change needed here)
+
+// ====== AUTH & INITIAL LOAD ======
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
-    window.location.href = "index.html"; // redirect to login if not logged in
+    window.location.href = "index.html";
     return;
   }
-
+  currentUser = user;
+  currentEmail = user.email;
   userNameEl.textContent = user.displayName || user.email;
 
-  // Fetch teacher profile info
-  const teacherRef = doc(db, "teachers", user.uid);
-  const teacherSnap = await getDoc(teacherRef);
-  if (teacherSnap.exists()) {
-    const data = teacherSnap.data();
-    profileInfoEl.innerHTML = `
-      <p><strong>Name:</strong> ${data.name || user.displayName || "N/A"}</p>
-      <p><strong>Email:</strong> ${user.email}</p>
-      <p><strong>Department:</strong> ${data.department || "N/A"}</p>
-    `;
-    if (data.photoURL) profilePicEl.src = data.photoURL;
+  // load profile from users collection (doc id assumed to be uid)
+  try {
+    const userDocRef = doc(db, "users", user.uid);
+    const userSnap = await getDoc(userDocRef);
+    if (userSnap.exists()) {
+      const data = userSnap.data();
+      profileInfoEl.innerHTML = `
+        <p><strong>Name:</strong> ${data.name || user.displayName || "N/A"}</p>
+        <p><strong>Email:</strong> ${data.email || user.email}</p>
+        <p><strong>Department:</strong> ${data.department || "N/A"}</p>
+      `;
+      if (data.photoURL) profilePicEl.src = data.photoURL;
+    } else {
+      // ensure minimal user doc exists
+      await setDoc(userDocRef, {
+        name: user.displayName || "",
+        email: user.email,
+        role: "teacher"
+      }, { merge: true });
+      profileInfoEl.innerHTML = `<p><strong>Name:</strong> ${user.displayName || "N/A"}</p><p><strong>Email:</strong> ${user.email}</p>`;
+    }
+  } catch (err) {
+    console.error("Error loading profile:", err);
   }
 
-  // Fetch assigned lessons
-  await loadAssignedLessons(user.uid);
-
-  // Fetch messages from admin
-  await loadMessages(user.uid);
-
-  // Load submitted lessons
-  await loadSubmittedLessons(user.uid);
+  // start realtime listeners
+  loadAssignedLessons();
+  loadMessages();
+  loadSubmittedLessons();
 });
 
-// ====== LOAD ASSIGNED LESSONS ======
-async function loadAssignedLessons(teacherId) {
-  const q = query(collection(db, "lessons"), where("teacherId", "==", teacherId));
-  const querySnap = await getDocs(q);
+// ====== SUBMIT LESSON REQUEST => pending_lessons ======
+if (teacherInputForm) {
+  teacherInputForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const class_name = form.elements["class_name"].value.trim();
+    const project_name = form.elements["project_name"].value.trim();
+    const lesson_number = form.elements["lesson_number"].value;
+    const start_time = form.elements["start_time"].value;
+    const end_time = form.elements["end_time"].value;
+    const is_lab = form.elements["is_lab"]?.checked ? true : false;
 
-  let classHTML = "";
-  let tableHTML = "";
+    if (!class_name || !project_name || !lesson_number || !start_time || !end_time) {
+      return alert("Please fill in all required fields.");
+    }
 
-  querySnap.forEach(docSnap => {
-    const lesson = docSnap.data();
-    const labTag = lesson.is_lab ? "<span class='lab-tag'>LAB</span>" : "";
-    classHTML += `
-      <div class="lesson-card">
-        <strong>${lesson.class_name}</strong> - ${lesson.project_name} ${labTag}
-        <p>Lesson ${lesson.lesson_number} | ${lesson.start_time} - ${lesson.end_time}</p>
-      </div>
-    `;
-    tableHTML += `
-      <tr>
-        <td>${lesson.date || "N/A"}</td>
-        <td>${lesson.class_name}</td>
-        <td>${lesson.project_name}</td>
-        <td>${lesson.lesson_number}</td>
-        <td>${lesson.start_time} - ${lesson.end_time}</td>
-        <td>${lesson.is_lab ? "LAB" : "Normal"}</td>
-      </tr>
-    `;
+    try {
+      await addDoc(collection(db, "pending_lessons"), {
+        teacherEmail: currentEmail,
+        teacherName: currentUser.displayName || currentEmail,
+        className: class_name,
+        projectName: project_name,
+        lessonNumber: lesson_number,
+        startTime: start_time,
+        endTime: end_time,
+        is_lab: !!is_lab,
+        createdAt: new Date().toISOString()
+      });
+      alert("Lesson request submitted to admin.");
+      form.reset();
+    } catch (err) {
+      console.error("Submit lesson error:", err);
+      alert("Error submitting lesson: " + err.message);
+    }
   });
-
-  assignedClassEl.innerHTML = classHTML || "<p>No lessons assigned yet.</p>";
-  assignedClassOverviewEl.innerHTML = classHTML || "<p>No lessons available.</p>";
-
-  document.querySelector("#assignedLessonsTable tbody").innerHTML = tableHTML;
 }
 
-// ====== LOAD MESSAGES ======
-async function loadMessages(teacherId) {
-  const q = query(collection(db, "messages"), where("to", "==", teacherId));
-  const querySnap = await getDocs(q);
-  let html = "";
-  querySnap.forEach(docSnap => {
-    const msg = docSnap.data();
-    html += `<div class="message-card">
-      <p><strong>${msg.fromName || "Admin"}:</strong> ${msg.text}</p>
-      <span class="time">${new Date(msg.timestamp?.toDate()).toLocaleString()}</span>
-    </div>`;
-  });
-  messagesListEl.innerHTML = html || "<p>No new messages.</p>";
+// ====== LOAD ASSIGNED / APPROVED LESSONS (lessons collection) ======
+function loadAssignedLessons() {
+  if (!currentEmail) return;
+  const q = query(collection(db, "lessons"), where("teacherEmail", "==", currentEmail), orderBy("createdAt", "desc"));
+  onSnapshot(q, (snapshot) => {
+    let classHTML = "";
+    let tableHTML = "";
+    if (snapshot.empty) {
+      assignedClassEl.innerHTML = "<p>No lessons assigned yet.</p>";
+      assignedClassOverviewEl.innerHTML = "<p>No lessons available.</p>";
+      document.querySelector("#assignedLessonsTable tbody").innerHTML = "<tr><td colspan='6'>No assigned lessons.</td></tr>";
+      return;
+    }
+    snapshot.forEach(docSnap => {
+      const lesson = docSnap.data();
+      const labTag = lesson.is_lab ? "<span class='lab-tag'>LAB</span>" : "";
+      classHTML += `
+        <div class="lesson-card">
+          <strong>${lesson.className}</strong> - ${lesson.projectName} ${labTag}
+          <p>Lesson ${lesson.lessonNumber} | ${lesson.startTime} - ${lesson.endTime}</p>
+        </div>
+      `;
+      tableHTML += `
+        <tr>
+          <td>${lesson.date || lesson.visitDate || (lesson.createdAt ? new Date(lesson.createdAt).toLocaleDateString() : '')}</td>
+          <td>${lesson.className}</td>
+          <td>${lesson.projectName}</td>
+          <td>${lesson.lessonNumber}</td>
+          <td>${lesson.startTime} - ${lesson.endTime}</td>
+          <td>${lesson.notes || ''}</td>
+        </tr>
+      `;
+    });
+    assignedClassEl.innerHTML = classHTML;
+    assignedClassOverviewEl.innerHTML = classHTML;
+    document.querySelector("#assignedLessonsTable tbody").innerHTML = tableHTML || "<tr><td colspan='6'>No assigned lessons.</td></tr>";
+  }, err => console.error("Assigned lessons listener error:", err));
 }
 
-// ====== LOAD SUBMITTED LESSONS ======
-async function loadSubmittedLessons(teacherId) {
-  const q = query(collection(db, "submittedLessons"), where("teacherId", "==", teacherId));
-  const querySnap = await getDocs(q);
-  let rows = "";
-  querySnap.forEach(docSnap => {
-    const lesson = docSnap.data();
-    rows += `
-      <tr>
-        <td>${lesson.date || new Date().toLocaleDateString()}</td>
-        <td>${lesson.class_name}</td>
-        <td>${lesson.project_name}</td>
-        <td>${lesson.lesson_number}</td>
-        <td>${lesson.start_time} - ${lesson.end_time}</td>
-        <td>${lesson.is_lab ? "LAB" : "Normal"}</td>
-      </tr>
-    `;
+// ====== LOAD MESSAGES (where to == teacher email OR 'all') ======
+function loadMessages() {
+  if (!currentEmail) return;
+
+  // Firestore 'in' query: to in [currentEmail, 'all']
+  const recipients = [currentEmail, "all"];
+  const q = query(collection(db, "messages"), where("to", "in", recipients), orderBy("date", "desc"));
+
+  onSnapshot(q, (snapshot) => {
+    messagesListEl.innerHTML = "";
+    if (snapshot.empty) {
+      messagesListEl.innerHTML = "<p>No new messages.</p>";
+    } else {
+      snapshot.forEach(docSnap => {
+        const m = docSnap.data();
+        const fromLabel = m.fromName || m.from || "Admin";
+        const when = m.date ? new Date(m.date).toLocaleString() : "";
+        const card = document.createElement("div");
+        card.className = "message-card";
+        card.innerHTML = `
+          <p><strong>${fromLabel}:</strong> ${m.content || m.message || ""}</p>
+          <div class="message-meta"><small>To: ${m.to || 'All'} • ${when}</small></div>
+        `;
+        messagesListEl.appendChild(card);
+      });
+    }
+
+    // append a simple reply form under messages so teacher can message admin
+    appendReplyForm();
+  }, err => {
+    // If 'in' queries are not enabled or fail, fallback to listen for personal messages only
+    console.warn("Messages 'in' listener error:", err);
+    // fallback single query
+    const q2 = query(collection(db, "messages"), where("to", "==", currentEmail), orderBy("date", "desc"));
+    onSnapshot(q2, (snapshot2) => {
+      messagesListEl.innerHTML = "";
+      if (snapshot2.empty) messagesListEl.innerHTML = "<p>No new messages.</p>";
+      else {
+        snapshot2.forEach(docSnap => {
+          const m = docSnap.data();
+          const fromLabel = m.fromName || m.from || "Admin";
+          const when = m.date ? new Date(m.date).toLocaleString() : "";
+          const card = document.createElement("div");
+          card.className = "message-card";
+          card.innerHTML = `<p><strong>${fromLabel}:</strong> ${m.content || m.message || ""}</p><div class="message-meta"><small>${when}</small></div>`;
+          messagesListEl.appendChild(card);
+        });
+      }
+      appendReplyForm();
+    }, e => console.error("Fallback messages listener error:", e));
   });
-  submittedLessonsTbody.innerHTML = rows || "<tr><td colspan='6'>No lessons submitted yet.</td></tr>";
+}
+
+// helper to add reply form under messages (only once)
+function appendReplyForm() {
+  if (document.getElementById("teacherReplyForm")) return;
+  const form = document.createElement("form");
+  form.id = "teacherReplyForm";
+  form.className = "message-reply-form";
+  form.innerHTML = `
+    <textarea id="teacherReplyInput" rows="3" placeholder="Write message to admin..."></textarea>
+    <div><button type="submit" class="btn-primary">Send to Admin</button></div>
+  `;
+  messagesListEl.appendChild(form);
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const content = document.getElementById("teacherReplyInput").value.trim();
+    if (!content) return alert("Enter a message.");
+    try {
+      await addDoc(collection(db, "messages"), {
+        from: currentEmail,
+        fromName: currentUser.displayName || currentEmail,
+        to: "admin",               // admin will see it in his messages list
+        content,
+        date: new Date().toISOString()
+      });
+      document.getElementById("teacherReplyInput").value = "";
+      alert("Message sent to admin.");
+    } catch (err) {
+      console.error("Send message error:", err);
+      alert("Error sending message: " + err.message);
+    }
+  });
+}
+
+// ====== LOAD SUBMITTED LESSONS (combine pending + approved) ======
+function loadSubmittedLessons() {
+  if (!currentEmail) return;
+
+  // Listen pending requests
+  const qPending = query(collection(db, "pending_lessons"), where("teacherEmail", "==", currentEmail), orderBy("createdAt", "desc"));
+  onSnapshot(qPending, (snapPending) => {
+    const pendingItems = [];
+    snapPending.forEach(d => {
+      const v = d.data();
+      pendingItems.push({
+        date: v.createdAt || v.createdAt,
+        className: v.className,
+        projectName: v.projectName,
+        lessonNumber: v.lessonNumber,
+        time: `${v.startTime || ''} - ${v.endTime || ''}`,
+        status: "Pending"
+      });
+    });
+
+    // After fetching pending, fetch approved (lessons)
+    const qApproved = query(collection(db, "lessons"), where("teacherEmail", "==", currentEmail), orderBy("createdAt", "desc"));
+    onSnapshot(qApproved, (snapApproved) => {
+      const approvedItems = [];
+      snapApproved.forEach(d => {
+        const v = d.data();
+        approvedItems.push({
+          date: v.visitDate || v.date || v.createdAt || "",
+          className: v.className,
+          projectName: v.projectName,
+          lessonNumber: v.lessonNumber,
+          time: `${v.startTime || ''} - ${v.endTime || ''}`,
+          status: "Approved"
+        });
+      });
+
+      // combine approved first, then pending (you can change order)
+      const rows = [...approvedItems, ...pendingItems];
+      let html = "";
+      if (rows.length === 0) {
+        submittedLessonsTbody.innerHTML = `<tr><td colspan="8">No lessons submitted yet.</td></tr>`;
+        return;
+      }
+      rows.forEach(r => {
+        html += `
+          <tr>
+            <td>${r.date ? (typeof r.date === 'string' ? new Date(r.date).toLocaleDateString() : new Date(r.date).toLocaleDateString()) : ''}</td>
+            <td>${r.className || ''}</td>
+            <td>${r.projectName || ''}</td>
+            <td>${r.lessonNumber || ''}</td>
+            <td>${r.time || ''}</td>
+            <td>${r.status}</td>
+            <td></td>
+            <td></td>
+          </tr>
+        `;
+      });
+      submittedLessonsTbody.innerHTML = html;
+    }, err => console.error("Approved lessons listener error:", err));
+  }, err => console.error("Pending lessons listener error:", err));
 }
 
 // ====== UPLOAD PROFILE PICTURE ======
-updateProfileBtn.addEventListener("click", async () => {
-  const file = uploadProfileEl.files[0];
-  if (!file) return alert("Please select a picture first.");
-  const user = auth.currentUser;
-  const storageRef = ref(storage, `teacher_profiles/${user.uid}.jpg`);
-  await uploadBytes(storageRef, file);
-  const downloadURL = await getDownloadURL(storageRef);
+if (updateProfileBtn) {
+  updateProfileBtn.addEventListener("click", async () => {
+    const file = uploadProfileEl.files[0];
+    if (!file) return alert("Please select a picture first.");
+    if (!currentUser) return alert("Not signed in.");
 
-  await addDoc(collection(db, "teachers"), {
-    uid: user.uid,
-    photoURL: downloadURL,
-    updatedAt: serverTimestamp()
+    try {
+      const storageRef = ref(storage, `teacher_profiles/${currentUser.uid}.jpg`);
+      await uploadBytes(storageRef, file);
+      const downloadURL = await getDownloadURL(storageRef);
+
+      // save to users collection using uid as doc id
+      await setDoc(doc(db, "users", currentUser.uid), {
+        photoURL: downloadURL,
+        name: currentUser.displayName || "",
+        email: currentUser.email,
+        role: "teacher",
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+
+      profilePicEl.src = downloadURL;
+      alert("Profile picture updated successfully!");
+    } catch (err) {
+      console.error("Profile upload error:", err);
+      alert("Error uploading profile: " + err.message);
+    }
   });
-
-  profilePicEl.src = downloadURL;
-  alert("Profile picture updated successfully!");
-});
+}
 
 // ====== LOGOUT ======
-logoutBtn.addEventListener("click", async () => {
-  await signOut(auth);
-  window.location.href = "index.html";
-});
+if (logoutBtn) {
+  logoutBtn.addEventListener("click", async () => {
+    try {
+      await signOut(auth);
+      window.location.href = "index.html";
+    } catch (err) {
+      console.error("Logout error:", err);
+      window.location.href = "index.html";
+    }
+  });
+}
