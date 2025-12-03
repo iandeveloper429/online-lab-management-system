@@ -1,9 +1,7 @@
 import { protectPage } from "./login.js";
 protectPage("teacher");
 
-
-
-// JAVASCRIPT/teachers.js
+// JAVASCRIPT/teachers.js (cleaned + fixed)
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
 import {
   getAuth,
@@ -20,7 +18,8 @@ import {
   onSnapshot,
   addDoc,
   setDoc,
-  orderBy
+  orderBy,
+  limit
 } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 import {
   getStorage,
@@ -40,7 +39,6 @@ const firebaseConfig = {
   measurementId: "G-H66GY777NK"
 };
 
-
 // ====== INITIALIZE FIREBASE ======
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -49,8 +47,8 @@ const storage = getStorage(app);
 
 // ====== DOM ELEMENTS ======
 const userNameEl = document.getElementById("userName");
-const assignedClassEl = document.getElementById("assignedClass");
-const assignedClassOverviewEl = document.getElementById("assignedClassOverview");
+const assignedClassEl = document.getElementById("assignedClass"); // small card
+const assignedClassOverviewEl = document.getElementById("assignedClassOverview"); // overview area
 const messagesListEl = document.getElementById("messagesList");
 const submittedLessonsTbody = document.querySelector("#submittedLessons tbody");
 const profileInfoEl = document.getElementById("profileInfo");
@@ -58,14 +56,14 @@ const profilePicEl = document.getElementById("profilePic");
 const uploadProfileEl = document.getElementById("uploadProfile");
 const updateProfileBtn = document.getElementById("updateProfileBtn");
 const logoutBtn = document.getElementById("logoutBtn");
-
 const teacherInputForm = document.getElementById("teacherInputForm");
+
+// Elements used for "My Class" lessons listing (make sure these IDs exist in your HTML)
+const lessonsContainer = document.getElementById("lessonsContainer") || document.createElement('div');
+if (!document.getElementById("lessonsContainer")) lessonsContainer.id = 'lessonsContainer';
 
 let currentUser = null;
 let currentEmail = null;
-
-// ====== NAV (already in your html) ======
-// (sidebar nav event listeners are in your page's script — no change needed here)
 
 // ====== AUTH & INITIAL LOAD ======
 onAuthStateChanged(auth, async (user) => {
@@ -73,6 +71,7 @@ onAuthStateChanged(auth, async (user) => {
     window.location.href = "index.html";
     return;
   }
+
   currentUser = user;
   currentEmail = user.email;
   userNameEl.textContent = user.displayName || user.email;
@@ -103,9 +102,9 @@ onAuthStateChanged(auth, async (user) => {
   }
 
   // start realtime listeners
-  loadAssignedLessons();
-  loadMessages();
-  loadSubmittedLessons();
+  loadAssignedClass();        // watch assigned class (admin → teacher)
+  loadMessages();             // watch messages (admin & broadcasts)
+  loadSubmittedLessons();     // watch teacher's pending + approved submissions
 });
 
 // ====== SUBMIT LESSON REQUEST => pending_lessons ======
@@ -145,142 +144,117 @@ if (teacherInputForm) {
   });
 }
 
-// ====== LOAD ASSIGNED / APPROVED LESSONS (lessons collection) ======
-function loadAssignedLessons() {
+// ====== LOAD ASSIGNED CLASS (admin assigns a class to a teacher)
+function loadAssignedClass() {
   if (!currentEmail) return;
-  const q = query(collection(db, "lessons"), where("teacherEmail", "==", currentEmail), orderBy("createdAt", "desc"));
-  onSnapshot(q, (snapshot) => {
-    let classHTML = "";
-    let tableHTML = "";
-    if (snapshot.empty) {
-      assignedClassEl.innerHTML = "<p>No lessons assigned yet.</p>";
-      assignedClassOverviewEl.innerHTML = "<p>No lessons available.</p>";
-      document.querySelector("#assignedLessonsTable tbody").innerHTML = "<tr><td colspan='6'>No assigned lessons.</td></tr>";
+
+  const docRef = doc(db, "classesAssigned", currentEmail);
+  onSnapshot(docRef, (docSnap) => {
+    if (!docSnap.exists()) {
+      assignedClassEl.innerHTML = "<p>No class assigned yet.</p>";
+      assignedClassOverviewEl.innerHTML = "<p>No class assigned yet.</p>";
+      lessonsContainer.innerHTML = "";
       return;
     }
-    snapshot.forEach(docSnap => {
-      const lesson = docSnap.data();
-      const labTag = lesson.is_lab ? "<span class='lab-tag'>LAB</span>" : "";
-      classHTML += `
-        <div class="lesson-card">
-          <strong>${lesson.className}</strong> - ${lesson.projectName} ${labTag}
-          <p>Lesson ${lesson.lessonNumber} | ${lesson.startTime} - ${lesson.endTime}</p>
-        </div>
-      `;
-      tableHTML += `
-        <tr>
-          <td>${lesson.date || lesson.visitDate || (lesson.createdAt ? new Date(lesson.createdAt).toLocaleDateString() : '')}</td>
-          <td>${lesson.className}</td>
-          <td>${lesson.projectName}</td>
-          <td>${lesson.lessonNumber}</td>
-          <td>${lesson.startTime} - ${lesson.endTime}</td>
-          <td>${lesson.notes || ''}</td>
-        </tr>
-      `;
-    });
-    assignedClassEl.innerHTML = classHTML;
-    assignedClassOverviewEl.innerHTML = classHTML;
-    document.querySelector("#assignedLessonsTable tbody").innerHTML = tableHTML || "<tr><td colspan='6'>No assigned lessons.</td></tr>";
-  }, err => console.error("Assigned lessons listener error:", err));
+
+    const data = docSnap.data();
+    const className = data.className || data.name || 'Unnamed Class';
+
+    assignedClassEl.innerHTML = `<strong>${className}</strong>`;
+    assignedClassOverviewEl.innerHTML = `<strong>${className}</strong>`;
+
+    // load lessons for this class (admin-provided lessons collection)
+    loadLessonsForThisClass(className);
+  }, err => {
+    console.error("Assigned class listener error:", err);
+  });
 }
 
-// ====== LOAD MESSAGES (where to == teacher email OR 'all') ======
-// ====== LOAD MESSAGES (Admin → Teacher or Everyone) ======
-// ====== LOAD MESSAGES (Admin → Teacher or Everyone) ======
+// ====== LOAD LESSONS FOR A GIVEN CLASS (for My Classes section)
+function loadLessonsForThisClass(className) {
+  if (!className) return;
+
+  // Expected Firestore layout: lessons collection with documents where className field matches,
+  // or nested: lessons/{className}/lessonList — support both approaches.
+
+  // Approach A: collection('lessons') with documents that have className field
+  const q1 = query(collection(db, "lessons"), where("className", "==", className), orderBy("createdAt", "asc"));
+
+  // We'll listen to q1 and render whatever comes back. If your data is nested, we can adapt.
+  onSnapshot(q1, (snapshot) => {
+    lessonsContainer.innerHTML = "";
+    if (snapshot.empty) {
+      lessonsContainer.innerHTML = "<p>No lessons found for this class.</p>";
+      return;
+    }
+
+    snapshot.forEach(docSnap => {
+      const l = docSnap.data();
+      const card = document.createElement('div');
+      card.className = 'lesson-card';
+      card.innerHTML = `
+        <h4>${l.projectName || l.title || 'Lesson'}</h4>
+        <p>Lesson #: ${l.lessonNumber || ''} ${l.is_lab ? '<span class="lab-tag">LAB</span>' : ''}</p>
+        <p>${l.startTime || ''} - ${l.endTime || ''}</p>
+        <p><small>${l.notes || l.description || ''}</small></p>
+      `;
+      lessonsContainer.appendChild(card);
+    });
+  }, err => {
+    console.error("Lessons for class listener error:", err);
+    lessonsContainer.innerHTML = "<p>Error loading lessons.</p>";
+  });
+}
+
+// ====== LOAD MESSAGES (Admin → Teacher or Broadcasts to teachers/all)
 function loadMessages() {
   if (!currentEmail) return;
 
-  // teacher should receive:
-  // 1) Direct messages (to = teacherEmail)
-  // 2) Group messages (to = "teachers")
-  // 3) Broadcast messages (to = "all")
-  const q = query(
-    collection(db, "messages"),
-    where("to", "in", [currentEmail, "teachers", "all"]),
-    orderBy("date", "desc")
-  );
-
-  onSnapshot(q, (snapshot) => {
-    messagesListEl.innerHTML = "";
-
-    if (snapshot.empty) {
-      messagesListEl.innerHTML = "<p>No messages yet.</p>";
-      appendReplyForm();
-      return;
-    }
-
-    snapshot.forEach(docSnap => {
-      const m = docSnap.data();
-      const from = m.fromName || m.from || "Admin";
-      const messageText = m.content || m.message || "";
-      const messageDate = m.date ? new Date(m.date).toLocaleString() : "";
-
-      const card = document.createElement("div");
-      card.className = "message-card";
-      card.innerHTML = `
-        <p><strong>${from}</strong></p>
-        <p>${messageText}</p>
-        <small>${messageDate}</small>
-      `;
-      messagesListEl.appendChild(card);
+  // Try a single 'in' query covering personal, teachers group, and all broadcasts
+  const recipients = [currentEmail, 'teachers', 'all'];
+  try {
+    const q = query(collection(db, 'messages'), where('to', 'in', recipients), orderBy('date', 'desc'));
+    onSnapshot(q, (snapshot) => {
+      renderMessagesSnapshot(snapshot);
+    }, err => {
+      console.error('Messages listener error:', err);
+      // fallback: listen only to personal messages
+      const q2 = query(collection(db, 'messages'), where('to', '==', currentEmail), orderBy('date', 'desc'));
+      onSnapshot(q2, (snap2) => renderMessagesSnapshot(snap2), e => console.error('Fallback messages error:', e));
     });
-
-    appendReplyForm();
-  }, err => {
-    console.error("Messages listener error:", err);
-  });
+  } catch (err) {
+    console.warn('Messages "in" query failed, using fallback:', err);
+    const q2 = query(collection(db, 'messages'), where('to', '==', currentEmail), orderBy('date', 'desc'));
+    onSnapshot(q2, (snap2) => renderMessagesSnapshot(snap2), e => console.error('Fallback messages error:', e));
+  }
 }
 
-
-
-  // Firestore 'in' query: to in [currentEmail, 'all']
-  const recipients = [currentEmail, "all"];
-  const q = query(collection(db, "messages"), where("to", "in", recipients), orderBy("date", "desc"));
-
-  onSnapshot(q, (snapshot) => {
-    messagesListEl.innerHTML = "";
-    if (snapshot.empty) {
-      messagesListEl.innerHTML = "<p>No new messages.</p>";
-    } else {
-      snapshot.forEach(docSnap => {
-        const m = docSnap.data();
-        const fromLabel = m.fromName || m.from || "Admin";
-        const when = m.date ? new Date(m.date).toLocaleString() : "";
-        const card = document.createElement("div");
-        card.className = "message-card";
-        card.innerHTML = `
-          <p><strong>${fromLabel}:</strong> ${m.content || m.message || ""}</p>
-          <div class="message-meta"><small>To: ${m.to || 'All'} • ${when}</small></div>
-        `;
-        messagesListEl.appendChild(card);
-      });
-    }
-
-    // append a simple reply form under messages so teacher can message admin
+function renderMessagesSnapshot(snapshot) {
+  messagesListEl.innerHTML = '';
+  if (snapshot.empty) {
+    messagesListEl.innerHTML = '<p>No messages yet.</p>';
     appendReplyForm();
-  }, err => {
-    // If 'in' queries are not enabled or fail, fallback to listen for personal messages only
-    console.warn("Messages 'in' listener error:", err);
-    // fallback single query
-    const q2 = query(collection(db, "messages"), where("to", "==", currentEmail), orderBy("date", "desc"));
-    onSnapshot(q2, (snapshot2) => {
-      messagesListEl.innerHTML = "";
-      if (snapshot2.empty) messagesListEl.innerHTML = "<p>No new messages.</p>";
-      else {
-        snapshot2.forEach(docSnap => {
-          const m = docSnap.data();
-          const fromLabel = m.fromName || m.from || "Admin";
-          const when = m.date ? new Date(m.date).toLocaleString() : "";
-          const card = document.createElement("div");
-          card.className = "message-card";
-          card.innerHTML = `<p><strong>${fromLabel}:</strong> ${m.content || m.message || ""}</p><div class="message-meta"><small>${when}</small></div>`;
-          messagesListEl.appendChild(card);
-        });
-      }
-      appendReplyForm();
-    }, e => console.error("Fallback messages listener error:", e));
+    return;
+  }
+
+  snapshot.forEach(docSnap => {
+    const m = docSnap.data();
+    const from = m.fromName || m.from || 'Admin';
+    const messageText = m.content || m.message || '';
+    const messageDate = m.date ? new Date(m.date).toLocaleString() : '';
+
+    const card = document.createElement('div');
+    card.className = 'message-card';
+    card.innerHTML = `
+      <p><strong>${from}</strong></p>
+      <p>${messageText}</p>
+      <small>${messageDate}</small>
+    `;
+    messagesListEl.appendChild(card);
   });
 
+  appendReplyForm();
+}
 
 // helper to add reply form under messages (only once)
 function appendReplyForm() {
@@ -319,14 +293,13 @@ function appendReplyForm() {
 function loadSubmittedLessons() {
   if (!currentEmail) return;
 
-  // Listen pending requests
   const qPending = query(collection(db, "pending_lessons"), where("teacherEmail", "==", currentEmail), orderBy("createdAt", "desc"));
   onSnapshot(qPending, (snapPending) => {
     const pendingItems = [];
     snapPending.forEach(d => {
       const v = d.data();
       pendingItems.push({
-        date: v.createdAt || v.createdAt,
+        date: v.createdAt || '',
         className: v.className,
         projectName: v.projectName,
         lessonNumber: v.lessonNumber,
@@ -335,14 +308,14 @@ function loadSubmittedLessons() {
       });
     });
 
-    // After fetching pending, fetch approved (lessons)
+    // Approved lessons (those in 'lessons' collection that belong to this teacher)
     const qApproved = query(collection(db, "lessons"), where("teacherEmail", "==", currentEmail), orderBy("createdAt", "desc"));
     onSnapshot(qApproved, (snapApproved) => {
       const approvedItems = [];
       snapApproved.forEach(d => {
         const v = d.data();
         approvedItems.push({
-          date: v.visitDate || v.date || v.createdAt || "",
+          date: v.visitDate || v.date || v.createdAt || '',
           className: v.className,
           projectName: v.projectName,
           lessonNumber: v.lessonNumber,
@@ -351,7 +324,7 @@ function loadSubmittedLessons() {
         });
       });
 
-      // combine approved first, then pending (you can change order)
+      // combine approved first, then pending
       const rows = [...approvedItems, ...pendingItems];
       let html = "";
       if (rows.length === 0) {
