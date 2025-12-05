@@ -56,7 +56,6 @@ document.querySelectorAll('.sidebar a').forEach(link=>{
     const section = link.dataset.section;
     Object.values(sectionsMap).forEach(sec=>sec.classList.remove('active'));
     sectionsMap[section].classList.add('active');
-
     document.querySelectorAll('.sidebar li').forEach(li=>li.classList.remove('active'));
     link.parentElement.classList.add('active');
   });
@@ -64,11 +63,9 @@ document.querySelectorAll('.sidebar a').forEach(link=>{
 
 // -------------------- Overview Cards --------------------
 async function loadOverview(){
-  // Teachers
   const teachersSnap = await getDocs(collection(db,'users'));
   document.getElementById('cardTeachers').textContent = teachersSnap.size;
 
-  // Lessons
   const lessonsSnap = await getDocs(collection(db,'lessons'));
   let pending = 0, approved = 0;
   lessonsSnap.forEach(d=>{
@@ -79,7 +76,6 @@ async function loadOverview(){
   document.getElementById('cardPending').textContent = pending;
   document.getElementById('cardApproved').textContent = approved;
 
-  // Messages
   const messagesSnap = await getDocs(collection(db,'messages'));
   document.getElementById('cardMessages').textContent = messagesSnap.size;
 
@@ -89,7 +85,7 @@ async function loadOverview(){
     type:'bar',
     data:{
       labels:['Pending Lessons','Approved Lessons','Messages'],
-      datasets:[{label:'Count', data:[pending, approved, messagesSnap.size], backgroundColor:['#f39c12','#27ae60','#3498db'] }]
+      datasets:[{label:'Count', data:[pending, approved, messagesSnap.size], backgroundColor:['#f39c12','#27ae60','#3498db']}]
     }
   });
 
@@ -98,7 +94,7 @@ async function loadOverview(){
     type:'pie',
     data:{
       labels:['Pending','Approved'],
-      datasets:[{data:[pending, approved], backgroundColor:['#e74c3c','#2ecc71'] }]
+      datasets:[{data:[pending, approved], backgroundColor:['#e74c3c','#2ecc71']}]
     }
   });
 }
@@ -141,13 +137,13 @@ async function loadLessons(){
     }
   });
 
-  // Pending actions
   pendingTbody.querySelectorAll('.approve').forEach(btn=>{
     btn.addEventListener('click', async ()=> {
       await updateDoc(doc(db,'lessons',btn.dataset.id), { status:'approved' });
       loadLessons(); loadOverview();
     });
   });
+
   pendingTbody.querySelectorAll('.reject').forEach(btn=>{
     btn.addEventListener('click', async ()=> {
       await deleteDoc(doc(db,'lessons',btn.dataset.id));
@@ -171,7 +167,7 @@ async function loadTeachers(){
         <td>${u.phone||''}</td>
         <td>${u.assignedClass||''}</td>
         <td>
-          <button class="edit-btn" data-id="${d.id}">Edit</button>
+          <button class="edit-btn" data-id="${d.id}">Assign Class</button>
           <button class="delete-btn" data-id="${d.id}">Delete</button>
         </td>
       `;
@@ -179,19 +175,17 @@ async function loadTeachers(){
     }
   });
 
-  // Edit/Delete
   tbody.addEventListener('click', async e=>{
     const id = e.target.dataset.id;
     if(!id) return;
     const docRef = doc(db,'users',id);
 
     if(e.target.matches('.edit-btn')){
-      const docSnap = await getDocs(docRef);
-      const name = prompt('Name:');
-      const phone = prompt('Phone:');
-      await updateDoc(docRef,{name, phone});
-      loadTeachers();
+      const teacherEmail = e.target.closest('tr').children[1].textContent;
+      const className = prompt("Enter class to assign:", "");
+      if(className) await assignClassToTeacher(teacherEmail,className);
     }
+
     if(e.target.matches('.delete-btn')){
       if(confirm('Delete teacher?')){
         await deleteDoc(docRef);
@@ -199,6 +193,18 @@ async function loadTeachers(){
       }
     }
   });
+}
+
+// -------------------- Assign Class --------------------
+async function assignClassToTeacher(teacherEmail,className){
+  if(!teacherEmail || !className) return alert("Teacher and Class required.");
+  const snap = await getDocs(query(collection(db,'users'), where('email','==',teacherEmail)));
+  if(!snap.empty){
+    const teacherDoc = snap.docs[0];
+    await updateDoc(doc(db,'users',teacherDoc.id), { assignedClass: className });
+    alert(`Class "${className}" assigned to ${teacherEmail}`);
+    loadTeachers();
+  }
 }
 
 // -------------------- Messages --------------------
@@ -219,77 +225,13 @@ messageForm?.addEventListener('submit', async e=>{
   messageForm.reset();
 });
 
-// -------------------- Inventory --------------------
-async function loadInventory(tableId, collectionName){
-  const tbody = document.querySelector(`#${tableId} tbody`);
-  if(!tbody) return;
-  tbody.innerHTML='';
-  const snap = await getDocs(collection(db,collectionName));
-  snap.forEach(d=>{
-    const item = d.data();
-    const tr = document.createElement('tr');
-    let actions='';
-    if(tableId==='kitsTable' || tableId==='tabletKitsTable' || tableId==='classKitsTable'){
-      actions = `<button class="edit-btn" data-id="${d.id}">Edit</button> <button class="delete-btn" data-id="${d.id}">Delete</button>`;
-    }
-    tr.innerHTML = Object.values(item).map(v=>`<td>${v}</td>`).join('') + `<td>${actions}</td>`;
-    tbody.appendChild(tr);
-  });
-
-  tbody.addEventListener('click', async e=>{
-    const id = e.target.dataset.id;
-    if(!id) return;
-    const docRef = doc(db,collectionName,id);
-
-    if(e.target.matches('.edit-btn')){
-      const docSnap = await getDocs(docRef);
-      const data = docSnap.data();
-      const name = prompt('Name:', data.name);
-      const total = prompt('Total Quantity:', data.totalQuantity);
-      const avail = prompt('Available Quantity:', data.availableQuantity);
-      await updateDoc(docRef,{name,totalQuantity:total,availableQuantity:avail});
-      loadInventory(tableId,collectionName);
-    }
-    if(e.target.matches('.delete-btn')){
-      if(confirm('Delete item?')){
-        await deleteDoc(docRef);
-        loadInventory(tableId,collectionName);
-      }
-    }
-  });
-}
-
-// -------------------- Refresh --------------------
-document.getElementById('refreshBtn').addEventListener('click', ()=>{
-  loadOverview(); loadLessons(); loadTeachers();
-  loadInventory('kitsTable','kitsInventory');
-  loadInventory('tabletKitsTable','tabletKitsInventory');
-  loadInventory('classKitsTable','classKitsInventory');
-  loadInventory('affectedTable','affectedKits');
-  loadInventory('missingTable','missingComponents');
-});
-
-// Initial Load
-loadOverview();
-loadLessons();
-loadTeachers();
-loadInventory('kitsTable','kitsInventory');
-loadInventory('tabletKitsTable','tabletKitsInventory');
-loadInventory('classKitsTable','classKitsInventory');
-loadInventory('affectedTable','affectedKits');
-loadInventory('missingTable','missingComponents');
-
-
 // -------------------- Populate Teacher Dropdowns --------------------
 async function populateTeacherDropdowns() {
   const teacherSelect = document.getElementById('teacherSelect');
   const filterTeacher = document.getElementById('filterTeacher');
-
-  if (!teacherSelect || !filterTeacher) return;
-
+  if(!teacherSelect || !filterTeacher) return;
   teacherSelect.innerHTML = `<option value="all">All Teachers</option>`;
   filterTeacher.innerHTML = `<option value="">All</option>`;
-
   const snap = await getDocs(collection(db,'users'));
   snap.forEach(d=>{
     const u = d.data();
@@ -307,81 +249,174 @@ async function populateTeacherDropdowns() {
   });
 }
 
-// -------------------- Assign Class to Teacher --------------------
-async function assignClassToTeacher(teacherEmail, className) {
-  if (!teacherEmail || !className) return alert("Teacher and Class required.");
-  const snap = await getDocs(query(collection(db,'users'), where('email','==',teacherEmail)));
-  if (!snap.empty) {
-    const teacherDoc = snap.docs[0];
-    await updateDoc(doc(db,'users',teacherDoc.id), { assignedClass: className });
-    alert(`Class "${className}" assigned to ${teacherEmail}`);
-    loadTeachers();
-  }
-}
-
-// Example usage: Assign a class via prompt (can be replaced with a form)
-document.getElementById('teachersSection').addEventListener('click', async e=>{
-  if(e.target.matches('.edit-btn')) {
-    const teacherEmail = e.target.closest('tr').children[1].textContent;
-    const className = prompt("Enter class to assign:", "");
-    if(className) await assignClassToTeacher(teacherEmail, className);
-  }
-});
-
-// -------------------- Filter Lessons in Reports --------------------
-document.getElementById('applyFilter').addEventListener('click', async ()=>{
-  const teacherFilter = document.getElementById('filterTeacher').value;
-  const statusFilter = document.getElementById('filterStatus').value;
-
-  const pendingTbody = document.querySelector('#pendingTable tbody');
-  const approvedTbody = document.querySelector('#approvedTable tbody');
-  pendingTbody.innerHTML='';
-  approvedTbody.innerHTML='';
-
-  const snap = await getDocs(collection(db,'lessons'));
+// -------------------- Inventory --------------------
+async function loadInventory(tableId,collectionName){
+  const tbody = document.querySelector(`#${tableId} tbody`);
+  if(!tbody) return;
+  tbody.innerHTML='';
+  const snap = await getDocs(collection(db,collectionName));
   snap.forEach(d=>{
-    const l = d.data();
-    if ((teacherFilter && l.teacher !== teacherFilter) || (statusFilter && l.status !== statusFilter)) return;
-
+    const item = d.data();
     const tr = document.createElement('tr');
-    if(l.status==='pending'){
-      tr.innerHTML = `
-        <td>${l.submittedDate||''}</td>
-        <td>${l.teacher}</td>
-        <td>${l.className}</td>
-        <td>${l.project}</td>
-        <td>${l.lessonNumber}</td>
-        <td>${l.time}</td>
-        <td>
-          <button class="approve" data-id="${d.id}">Approve</button>
-          <button class="reject" data-id="${d.id}">Reject</button>
-        </td>
-      `;
-      pendingTbody.appendChild(tr);
-    } else if(l.status==='approved'){
-      tr.innerHTML = `
-        <td>${l.submittedDate||''}</td>
-        <td>${l.teacher}</td>
-        <td>${l.className}</td>
-        <td>${l.project}</td>
-        <td>${l.lessonNumber}</td>
-        <td>${l.time}</td>
-      `;
-      approvedTbody.appendChild(tr);
+    let actions = `<button class="delete-btn" data-id="${d.id}">Delete</button>`;
+    tr.innerHTML = Object.values(item).map(v=>`<td>${v}</td>`).join('') + `<td>${actions}</td>`;
+    tbody.appendChild(tr);
+  });
+
+  tbody.addEventListener('click', async e=>{
+    const id = e.target.dataset.id;
+    if(!id) return;
+    const docRef = doc(db,collectionName,id);
+    if(e.target.matches('.delete-btn')){
+      if(confirm('Delete item?')){
+        await deleteDoc(docRef);
+        loadInventory(tableId,collectionName);
+      }
     }
   });
+}
 
-  // Re-bind approve/reject buttons
-  pendingTbody.querySelectorAll('.approve').forEach(btn=>{
-    btn.addEventListener('click', async ()=> {
-      await updateDoc(doc(db,'lessons',btn.dataset.id), { status:'approved' });
-      loadLessons(); loadOverview();
-    });
-  });
-  pendingTbody.querySelectorAll('.reject').forEach(btn=>{
-    btn.addEventListener('click', async ()=> {
-      await deleteDoc(doc(db,'lessons',btn.dataset.id));
-      loadLessons(); loadOverview();
-    });
-  });
+// -------------------- Add Inventory --------------------
+const addKitForm = document.getElementById('addKitForm');
+addKitForm?.addEventListener('submit', async e=>{
+  e.preventDefault();
+  const name = document.getElementById('kitName').value.trim();
+  const total = parseInt(document.getElementById('kitTotal').value);
+  const available = parseInt(document.getElementById('kitAvailable').value);
+
+  if(!name || isNaN(total) || isNaN(available)) return alert('Fill all fields correctly');
+
+  await addDoc(collection(db,'kitsInventory'), { name, totalQuantity: total, availableQuantity: available });
+
+  addKitForm.reset();
+  loadInventory('kitsTable','kitsInventory');
 });
+
+// -------------------- Refresh --------------------
+document.getElementById('refreshBtn').addEventListener('click', ()=>{
+  loadOverview();
+  loadLessons();
+  loadTeachers();
+  loadInventory('kitsTable','kitsInventory');
+  loadInventory('tabletKitsTable','tabletKitsInventory');
+  loadInventory('classKitsTable','classKitsInventory');
+  loadInventory('affectedTable','affectedKits');
+  loadInventory('missingTable','missingComponents');
+  populateTeacherDropdowns();
+});
+
+// -------------------- Initial Load --------------------
+loadOverview();
+loadLessons();
+loadTeachers();
+loadInventory('kitsTable','kitsInventory');
+loadInventory('tabletKitsTable','tabletKitsInventory');
+loadInventory('classKitsTable','classKitsInventory');
+loadInventory('affectedTable','affectedKits');
+loadInventory('missingTable','missingComponents');
+populateTeacherDropdowns();
+
+
+// -------------------- Inventory Add Forms --------------------
+document.getElementById('addKitForm').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const name = document.getElementById('kitName').value;
+  const total = Number(document.getElementById('kitTotal').value);
+  const avail = Number(document.getElementById('kitAvailable').value);
+  await addDoc(collection(db,'kitsInventory'), { name, totalQuantity: total, availableQuantity: avail });
+  e.target.reset();
+  loadInventory('kitsTable','kitsInventory');
+});
+
+document.getElementById('addTabletKitForm').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const name = document.getElementById('tabletKitName').value;
+  const total = Number(document.getElementById('tabletKitTotal').value);
+  const avail = Number(document.getElementById('tabletKitAvailable').value);
+  await addDoc(collection(db,'tabletKitsInventory'), { name, totalQuantity: total, availableQuantity: avail });
+  e.target.reset();
+  loadInventory('tabletKitsTable','tabletKitsInventory');
+});
+
+document.getElementById('addClassKitForm').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const name = document.getElementById('classKitName').value;
+  const className = document.getElementById('classKitClass').value;
+  const total = Number(document.getElementById('classKitTotal').value);
+  const avail = Number(document.getElementById('classKitAvailable').value);
+  await addDoc(collection(db,'classKitsInventory'), { name, className, totalQuantity: total, availableQuantity: avail });
+  e.target.reset();
+  loadInventory('classKitsTable','classKitsInventory');
+});
+
+document.getElementById('addAffectedForm').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const name = document.getElementById('affectedName').value;
+  const type = document.getElementById('affectedType').value;
+  const notes = document.getElementById('affectedNotes').value;
+  await addDoc(collection(db,'affectedKits'), { name, type, notes, dateMarked: new Date().toISOString() });
+  e.target.reset();
+  loadInventory('affectedTable','affectedKits');
+});
+
+document.getElementById('addMissingForm').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const name = document.getElementById('missingName').value;
+  const kitName = document.getElementById('missingKit').value;
+  const notes = document.getElementById('missingNotes').value;
+  await addDoc(collection(db,'missingComponents'), { name, kitName, notes, dateMarked: new Date().toISOString() });
+  e.target.reset();
+  loadInventory('missingTable','missingComponents');
+});
+
+
+// -------------------- Inventory --------------------
+async function loadInventory(tableId, collectionName){
+  const tbody = document.querySelector(`#${tableId} tbody`);
+  if(!tbody) return;
+  tbody.innerHTML='';
+
+  const snap = await getDocs(collection(db,collectionName));
+  snap.forEach(d=>{
+    const item = d.data();
+    const tr = document.createElement('tr');
+
+    // Dynamically generate table cells for all properties
+    const cells = Object.values(item).map(v=>`<td>${v}</td>`).join('');
+    // Add actions for every table
+    tr.innerHTML = cells + `<td>
+      <button class="edit-btn" data-id="${d.id}">Edit</button>
+      <button class="delete-btn" data-id="${d.id}">Delete</button>
+    </td>`;
+
+    tbody.appendChild(tr);
+  });
+
+  tbody.addEventListener('click', async e=>{
+    const id = e.target.dataset.id;
+    if(!id) return;
+    const docRef = doc(db,collectionName,id);
+
+    if(e.target.matches('.edit-btn')){
+      const dataSnap = await getDocs(collection(db, collectionName));
+      const dataDoc = dataSnap.docs.find(doc => doc.id === id)?.data();
+      if(!dataDoc) return;
+
+      const updatedData = {};
+      // Prompt for every key
+      for(const key in dataDoc){
+        const val = prompt(`Edit ${key}:`, dataDoc[key]);
+        if(val !== null) updatedData[key] = isNaN(dataDoc[key]) ? val : Number(val);
+      }
+      await updateDoc(docRef, updatedData);
+      loadInventory(tableId, collectionName);
+    }
+
+    if(e.target.matches('.delete-btn')){
+      if(confirm('Delete this item?')){
+        await deleteDoc(docRef);
+        loadInventory(tableId, collectionName);
+      }
+    }
+  });
+}

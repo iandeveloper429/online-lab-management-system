@@ -157,88 +157,122 @@ th { background:rgba(255,215,0,0.85); color:#003366; }
     </section>
 
     <!-- Inventory Section -->
-    <section id="inventorySection">
-      <h2>Lab Inventory Management</h2>
+<section id="inventorySection">
+  <h2>Lab Inventory Management</h2>
 
-      <!-- Kits Inventory -->
-      <h3>General Kits</h3>
-      <div class="table-container">
-        <table id="kitsTable">
-          <thead>
-            <tr>
-              <th>Kit Name</th>
-              <th>Total Quantity</th>
-              <th>Available Quantity</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
+  <!-- Kits Inventory -->
+  <h3>General Kits</h3>
+  <form id="addKitForm">
+    <input type="text" id="kitName" placeholder="Kit Name" required>
+    <input type="number" id="kitTotal" placeholder="Total Quantity" required>
+    <input type="number" id="kitAvailable" placeholder="Available Quantity" required>
+    <button type="submit">Add Kit</button>
+  </form>
+  <div class="table-container">
+    <table id="kitsTable">
+      <thead>
+        <tr>
+          <th>Kit Name</th>
+          <th>Total Quantity</th>
+          <th>Available Quantity</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
 
-      <!-- Tablet Kits for Competition -->
-      <h3>Tablet Kits (Competitions)</h3>
-      <div class="table-container">
-        <table id="tabletKitsTable">
-          <thead>
-            <tr>
-              <th>Kit Name</th>
-              <th>Total Quantity</th>
-              <th>Available Quantity</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
+  <!-- Tablet Kits for Competition -->
+  <h3>Tablet Kits (Competitions)</h3>
+  <form id="addTabletKitForm">
+    <input type="text" id="tabletKitName" placeholder="Kit Name" required>
+    <input type="number" id="tabletKitTotal" placeholder="Total Quantity" required>
+    <input type="number" id="tabletKitAvailable" placeholder="Available Quantity" required>
+    <button type="submit">Add Tablet Kit</button>
+  </form>
+  <div class="table-container">
+    <table id="tabletKitsTable">
+      <thead>
+        <tr>
+          <th>Kit Name</th>
+          <th>Total Quantity</th>
+          <th>Available Quantity</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
 
-      <!-- Kits for Classes -->
-      <h3>Kits for Classes</h3>
-      <div class="table-container">
-        <table id="classKitsTable">
-          <thead>
-            <tr>
-              <th>Kit Name</th>
-              <th>Class</th>
-              <th>Total Quantity</th>
-              <th>Available Quantity</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
+  <!-- Kits for Classes -->
+  <h3>Kits for Classes</h3>
+  <form id="addClassKitForm">
+    <input type="text" id="classKitName" placeholder="Kit Name" required>
+    <input type="text" id="classKitClass" placeholder="Class" required>
+    <input type="number" id="classKitTotal" placeholder="Total Quantity" required>
+    <input type="number" id="classKitAvailable" placeholder="Available Quantity" required>
+    <button type="submit">Add Class Kit</button>
+  </form>
+  <div class="table-container">
+    <table id="classKitsTable">
+      <thead>
+        <tr>
+          <th>Kit Name</th>
+          <th>Class</th>
+          <th>Total Quantity</th>
+          <th>Available Quantity</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
 
-      <!-- Affected Kits/Devices -->
-      <h3>Affected / Damaged Kits</h3>
-      <div class="table-container">
-        <table id="affectedTable">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Type</th>
-              <th>Notes</th>
-              <th>Date Marked</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
+  <!-- Affected Kits/Devices -->
+  <h3>Affected / Damaged Kits</h3>
+  <form id="addAffectedForm">
+    <input type="text" id="affectedName" placeholder="Name" required>
+    <input type="text" id="affectedType" placeholder="Type" required>
+    <input type="text" id="affectedNotes" placeholder="Notes">
+    <button type="submit">Add Affected Kit</button>
+  </form>
+  <div class="table-container">
+    <table id="affectedTable">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Notes</th>
+          <th>Date Marked</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
 
-      <!-- Missing Kit Components -->
-      <h3>Missing Kit Components</h3>
-      <div class="table-container">
-        <table id="missingTable">
-          <thead>
-            <tr>
-              <th>Component Name</th>
-              <th>Kit Name</th>
-              <th>Notes</th>
-              <th>Date Marked</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </section>
+  <!-- Missing Kit Components -->
+  <h3>Missing Kit Components</h3>
+  <form id="addMissingForm">
+    <input type="text" id="missingName" placeholder="Component Name" required>
+    <input type="text" id="missingKit" placeholder="Kit Name" required>
+    <input type="text" id="missingNotes" placeholder="Notes">
+    <button type="submit">Add Missing Component</button>
+  </form>
+  <div class="table-container">
+    <table id="missingTable">
+      <thead>
+        <tr>
+          <th>Component Name</th>
+          <th>Kit Name</th>
+          <th>Notes</th>
+          <th>Date Marked</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</section>
+
   </div>
 
   <!-- Teacher Modal -->
