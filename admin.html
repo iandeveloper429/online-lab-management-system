@@ -1,109 +1,142 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin Dashboard | LabSystem</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/material-icons/iconfont/material-icons.css" rel="stylesheet">
+  <link rel="stylesheet" href="css/admin.css">
   <style>
-    /* Minimal inline admin CSS - adjust in CSS/admin.css if you prefer */
-    *{box-sizing:border-box;font-family:'Poppins',sans-serif}
-    body{margin:0;background:linear-gradient(135deg,#001f4d,#003366);color:#fff;min-height:100vh}
-    .sidebar{width:220px;position:fixed;left:0;top:0;bottom:0;background:rgba(0,0,0,.85);padding-top:30px}
-    .sidebar .logo{text-align:center;font-size:22px;color:#ffd700;margin-bottom:12px}
-    .sidebar ul{list-style:none;padding-left:0}
-    .sidebar li{padding:12px 18px}
-    .sidebar a{color:#fff;text-decoration:none;display:block}
-    .sidebar a:hover, .sidebar li.active a{background:#ffd700;color:#003366;border-radius:8px}
-    .main{margin-left:220px;padding:20px}
-    header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
-    header h1{color:#ffd700}
-    .profile-name{color:#ffd700;margin-bottom:12px}
-    .controls button{margin-left:8px;padding:8px 12px;border-radius:8px;border:none;cursor:pointer;background:linear-gradient(135deg,#ffd700,#ffcc00);color:#003366;font-weight:600}
-    section{display:none}
-    section.active{display:block}
-    table{width:100%;border-collapse:collapse;margin-bottom:18px;background:rgba(255,255,255,0.03);border-radius:8px;overflow:hidden}
-    th,td{padding:10px;border-bottom:1px solid rgba(255,255,255,0.05);text-align:left}
-    th{background:rgba(255,215,0,0.85);color:#003366}
-    .card-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:18px}
-    .card{background:rgba(255,255,255,0.04);padding:12px;border-radius:10px;min-width:150px}
-    .small-btn{padding:6px 8px;border-radius:6px;border:none;cursor:pointer}
-    .approve{background:#4CAF50;color:#fff}
-    .reject{background:#f44336;color:#fff}
-    .view-btn{background:#2196F3;color:#fff}
-    #teacherModal{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:#fff;color:#000;padding:16px;border-radius:8px;display:none;z-index:60;max-width:90%;max-height:85%;overflow:auto}
-    #teacherModalClose{float:right;cursor:pointer}
-    @media(max-width:768px){.sidebar{width:60px}.main{margin-left:60px}}
+    /* Base */
+* { margin:0; padding:0; box-sizing:border-box; font-family:'Poppins',sans-serif; }
+body { min-height:100vh; background:linear-gradient(135deg,#001f4d,#003366); color:#fff; }
+
+/* Sidebar */
+.sidebar {
+  position:fixed; top:0; left:0; bottom:0; width:220px; background:rgba(0,0,0,0.85); padding-top:30px; transition:width .3s; overflow:hidden;
+}
+.sidebar .logo { text-align:center; font-size:22px; color:#ffd700; margin-bottom:12px; white-space:nowrap; }
+.sidebar ul { list-style:none; padding-left:0; }
+.sidebar li { padding:12px 18px; }
+.sidebar a { color:#fff; text-decoration:none; display:flex; align-items:center; gap:8px; }
+.sidebar a:hover, .sidebar li.active a { background:#ffd700; color:#003366; border-radius:8px; }
+.sidebar .label { display:inline-block; }
+
+/* Main */
+.main { margin-left:220px; padding:20px; transition:margin-left .3s; }
+header { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+header h1 { color:#ffd700; font-size:20px; }
+.profile-name { color:#ffd700; margin-bottom:12px; }
+
+/* Controls */
+.controls button { margin-left:8px; padding:8px 12px; border-radius:8px; border:none; cursor:pointer; background:linear-gradient(135deg,#ffd700,#ffcc00); color:#003366; font-weight:600; }
+
+/* Cards */
+.card-row { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:18px; }
+.card { background:rgba(255,255,255,0.04); padding:12px; border-radius:10px; flex:1 1 150px; }
+
+/* Tables */
+.table-container { overflow-x:auto; margin-bottom:18px; }
+table { width:100%; border-collapse:collapse; background:rgba(255,255,255,0.03); border-radius:8px; overflow:hidden; }
+th, td { padding:10px; border-bottom:1px solid rgba(255,255,255,0.05); text-align:left; }
+th { background:rgba(255,215,0,0.85); color:#003366; }
+
+/* Buttons */
+.small-btn { padding:6px 8px; border-radius:6px; border:none; cursor:pointer; }
+.approve{background:#4CAF50;color:#fff;}
+.reject{background:#f44336;color:#fff;}
+.view-btn{background:#2196F3;color:#fff;}
+
+/* Modal */
+#teacherModal { position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); background:#fff; color:#000; padding:16px; border-radius:8px; display:none; z-index:60; max-width:90%; max-height:85%; overflow:auto; }
+#teacherModalClose { float:right; cursor:pointer; }
+
+/* Charts */
+.charts-container { display:flex; gap:12px; flex-wrap:wrap; }
+
+/* Responsive */
+@media(max-width:992px){.sidebar{width:60px}.main{margin-left:60px;padding:12px}.card-row{flex-direction:column}.sidebar .label{display:none}}
+@media(max-width:576px){header h1{font-size:16px}.controls button{padding:6px 10px;font-size:12px}table th,td{padding:6px 4px;font-size:12px}.card{padding:8px;font-size:12px}}
   </style>
+
 </head>
 <body>
   <nav class="sidebar">
     <div class="logo">🧠 LabSystem</div>
     <ul>
-      <li class="active"><a href="#" data-section="overview">Dashboard</a></li>
-      <li><a href="#" data-section="lessons">Lessons</a></li>
-      <li><a href="#" data-section="teachers">Teachers</a></li>
-      <li><a href="#" data-section="messages">Messages</a></li>
-      <li><a href="#" data-section="reports">Reports</a></li>
+      <li class="active"><a href="#" data-section="overview"><span class="material-icons">dashboard</span> <span class="label">Dashboard</span></a></li>
+      <li><a href="#" data-section="lessons"><span class="material-icons">menu_book</span> <span class="label">Lessons</span></a></li>
+      <li><a href="#" data-section="teachers"><span class="material-icons">person</span> <span class="label">Teachers</span></a></li>
+      <li><a href="#" data-section="messages"><span class="material-icons">message</span> <span class="label">Messages</span></a></li>
+      <li><a href="#" data-section="reports"><span class="material-icons">assessment</span> <span class="label">Reports</span></a></li>
+      <li><a href="#" data-section="inventory"><span class="material-icons">inventory_2</span> <span class="label">Inventory</span></a></li>
     </ul>
   </nav>
 
   <div class="main">
     <div class="profile-name">Welcome, <span id="userName"></span></div>
     <header>
-      <h1>Admin Control Panel</h1>
+      <h1>Admin Panel</h1>
       <div class="controls">
         <button id="refreshBtn">Refresh</button>
         <button id="logoutBtn">Logout</button>
       </div>
     </header>
 
-    <!-- OVERVIEW -->
+    <!-- Overview -->
     <section id="overviewSection" class="active">
       <div class="card-row">
-        <div class="card"><div>Total Teachers</div><h2 id="cardTeachers">0</h2></div>
-        <div class="card"><div>Pending Lessons</div><h2 id="cardPending">0</h2></div>
-        <div class="card"><div>Approved Lessons</div><h2 id="cardApproved">0</h2></div>
-        <div class="card"><div>Messages (total)</div><h2 id="cardMessages">0</h2></div>
+        <div class="card"><span>Total Teachers</span><h2 id="cardTeachers">0</h2></div>
+        <div class="card"><span>Pending Lessons</span><h2 id="cardPending">0</h2></div>
+        <div class="card"><span>Approved Lessons</span><h2 id="cardApproved">0</h2></div>
+        <div class="card"><span>Messages</span><h2 id="cardMessages">0</h2></div>
       </div>
-
-      <div class="charts-container" style="display:flex;gap:12px;flex-wrap:wrap">
-        <canvas id="barChart" width="400" height="200"></canvas>
-        <canvas id="pieChart" width="400" height="200"></canvas>
+      <div class="charts-container">
+        <canvas id="barChart"></canvas>
+        <canvas id="pieChart"></canvas>
       </div>
     </section>
 
-    <!-- LESSONS -->
+    <!-- Lessons -->
     <section id="lessonsSection">
-      <h2>Pending Lesson Requests</h2>
-      <table id="pendingTable">
-        <thead><tr><th>Submitted</th><th>Teacher</th><th>Class</th><th>Project</th><th>Lesson #</th><th>Time</th><th>Actions</th></tr></thead>
-        <tbody></tbody>
-      </table>
+      <h2>Pending Lessons</h2>
+      <div class="table-container">
+        <table id="pendingTable">
+          <thead><tr><th>Submitted</th><th>Teacher</th><th>Class</th><th>Project</th><th>Lesson #</th><th>Time</th><th>Actions</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
 
       <h2>Approved Lessons</h2>
-      <table id="approvedTable">
-        <thead><tr><th>Date</th><th>Teacher</th><th>Class</th><th>Project</th><th>Lesson #</th><th>Time</th></tr></thead>
-        <tbody></tbody>
-      </table>
+      <div class="table-container">
+        <table id="approvedTable">
+          <thead><tr><th>Date</th><th>Teacher</th><th>Class</th><th>Project</th><th>Lesson #</th><th>Time</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
     </section>
 
-    <!-- TEACHERS -->
+    <!-- Teachers -->
     <section id="teachersSection">
       <h2>Registered Teachers</h2>
-      <table id="teachersTable">
-        <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Assigned Class</th><th>Actions</th></tr></thead>
-        <tbody></tbody>
-      </table>
+      <div class="table-container">
+        <table id="teachersTable">
+          <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Assigned Class</th><th>Actions</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
     </section>
 
-    <!-- MESSAGES -->
+    <!-- Messages -->
     <section id="messagesSection">
-      <h2>Send Message to Teacher</h2>
+      <h2>Send Message</h2>
       <form id="messageForm">
-        <label>To: <select id="teacherSelect"><option value="all">All Teachers</option></select></label><br><br>
-        <textarea id="messageContent" rows="4" placeholder="Type message..." required style="width:100%"></textarea><br><br>
+        <label>To:
+          <select id="teacherSelect"><option value="all">All Teachers</option></select>
+        </label><br><br>
+        <textarea id="messageContent" rows="4" placeholder="Type message..." required></textarea><br><br>
         <button type="submit">Send</button>
       </form>
 
@@ -111,23 +144,104 @@
       <ul id="sentMessages"></ul>
     </section>
 
-    <!-- REPORTS -->
+    <!-- Reports -->
     <section id="reportsSection">
       <h2>Reports & Export</h2>
-      <button id="exportCsvBtn" class="small-btn">Export All Lessons (CSV)</button>
-      <button id="printBtn" class="small-btn">Print Current View</button>
-      <div style="margin-top:12px">
-        <h3>Search / Filter</h3>
+      <button id="exportCsvBtn" class="small-btn">Export CSV</button>
+      <button id="printBtn" class="small-btn">Print</button>
+      <div class="filters">
         <label>Teacher: <select id="filterTeacher"><option value="">All</option></select></label>
-        <label style="margin-left:8px">Status:
-          <select id="filterStatus"><option value="">All</option><option value="pending">Pending</option><option value="approved">Approved</option></select>
-        </label>
+        <label>Status: <select id="filterStatus"><option value="">All</option><option value="pending">Pending</option><option value="approved">Approved</option></select></label>
         <button id="applyFilter">Apply</button>
+      </div>
+    </section>
+
+    <!-- Inventory Section -->
+    <section id="inventorySection">
+      <h2>Lab Inventory Management</h2>
+
+      <!-- Kits Inventory -->
+      <h3>General Kits</h3>
+      <div class="table-container">
+        <table id="kitsTable">
+          <thead>
+            <tr>
+              <th>Kit Name</th>
+              <th>Total Quantity</th>
+              <th>Available Quantity</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <!-- Tablet Kits for Competition -->
+      <h3>Tablet Kits (Competitions)</h3>
+      <div class="table-container">
+        <table id="tabletKitsTable">
+          <thead>
+            <tr>
+              <th>Kit Name</th>
+              <th>Total Quantity</th>
+              <th>Available Quantity</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <!-- Kits for Classes -->
+      <h3>Kits for Classes</h3>
+      <div class="table-container">
+        <table id="classKitsTable">
+          <thead>
+            <tr>
+              <th>Kit Name</th>
+              <th>Class</th>
+              <th>Total Quantity</th>
+              <th>Available Quantity</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <!-- Affected Kits/Devices -->
+      <h3>Affected / Damaged Kits</h3>
+      <div class="table-container">
+        <table id="affectedTable">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Type</th>
+              <th>Notes</th>
+              <th>Date Marked</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <!-- Missing Kit Components -->
+      <h3>Missing Kit Components</h3>
+      <div class="table-container">
+        <table id="missingTable">
+          <thead>
+            <tr>
+              <th>Component Name</th>
+              <th>Kit Name</th>
+              <th>Notes</th>
+              <th>Date Marked</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
       </div>
     </section>
   </div>
 
-  <!-- Teacher view modal -->
+  <!-- Teacher Modal -->
   <div id="teacherModal">
     <span id="teacherModalClose">✖</span>
     <div id="teacherModalContent"></div>

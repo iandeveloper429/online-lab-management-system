@@ -1,5 +1,4 @@
-// JAVASCRIPT/admin.js (safe, auth-guarded, DOM-guarded)
-
+// ================== admin.js ==================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
 import {
   getFirestore, collection, addDoc, query, where, onSnapshot,
@@ -7,7 +6,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
 
-// ===== FIREBASE CONFIG (fixed storage bucket) =====
+// ===== FIREBASE CONFIG =====
 const firebaseConfig = {
   apiKey: "AIzaSyDe9fXCUSpTFw0VSq_ppzRqOjhkCDIHDXY",
   authDomain: "lab-management-system-9a96e.firebaseapp.com",
@@ -22,7 +21,7 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 
-// --- DOM refs (may be null if element missing) ---
+// ====== DOM ELEMENTS ======
 const userNameEl = document.getElementById('userName');
 const cardTeachers = document.getElementById('cardTeachers');
 const cardPending = document.getElementById('cardPending');
@@ -51,33 +50,31 @@ const sectionsMap = {
   reports: reportsSection
 };
 
-// canvas contexts (guarded)
+// Charts
 const barEl = document.getElementById('barChart');
 const pieEl = document.getElementById('pieChart');
 const barCtx = barEl ? barEl.getContext('2d') : null;
 const pieCtx = pieEl ? pieEl.getContext('2d') : null;
-
 let barChart = null;
+let pieChart = null;
 
-// store admin user object
+// Teacher Modal
+const teacherModal = document.getElementById('teacherModal');
+const teacherModalContent = document.getElementById('teacherModalContent');
+const teacherModalClose = document.getElementById('teacherModalClose');
+
+// Admin user store
 let loggedInUser = null;
 
-// --- AUTH GUARD: wait for Firebase auth state before doing anything ---
+// ====== AUTH GUARD ======
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
-    // Not signed in → redirect to login
     localStorage.removeItem('loggedInUser');
     return window.location.href = 'login.html';
   }
-
-  // fetch user's firestore profile
   try {
     const userDoc = await getDoc(doc(db, 'users', user.uid));
-    if (!userDoc.exists()) {
-      alert('Account details missing. Please contact admin.');
-      await signOut(auth);
-      return window.location.href = 'login.html';
-    }
+    if (!userDoc.exists()) throw new Error('Account details missing.');
     const userData = userDoc.data();
     if (userData.role !== 'admin') {
       alert('Access denied. Please log in as admin.');
@@ -85,17 +82,17 @@ onAuthStateChanged(auth, async (user) => {
       return window.location.href = 'login.html';
     }
 
-    // OK — user is admin
     loggedInUser = { uid: user.uid, ...userData };
     localStorage.setItem('loggedInUser', JSON.stringify(loggedInUser));
     if (userNameEl) userNameEl.textContent = loggedInUser.name || loggedInUser.email || 'Admin';
 
-    // initialize UI listeners only after auth confirmed
+    // Initialize dashboard
     initSidebarNav();
     initLogout();
-    setupRealtimeListeners(); // sets up all onSnapshot listeners (safe-guarded inside)
-    initUIActions(); // click handlers for approve/reject/view
-    initControls(); // export/print/filters etc
+    setupRealtimeListeners();
+    initUIActions();
+    initControls();
+    initExtraFeatures(); // sidebar toggle, dark mode
   } catch (err) {
     console.error('Auth guard error:', err);
     alert('Authentication error. Please login again.');
@@ -104,10 +101,10 @@ onAuthStateChanged(auth, async (user) => {
   }
 });
 
-// ----------------- helper: ensure element exists -----------------
+// ===== HELPER ======
 function exists(el) { return !!el; }
 
-// ----------------- Initialize sidebar nav (safe) -----------------
+// ===== SIDEBAR NAV ======
 function initSidebarNav() {
   const links = document.querySelectorAll('.sidebar a');
   if (!links) return;
@@ -123,7 +120,7 @@ function initSidebarNav() {
   });
 }
 
-// ----------------- logout setup -----------------
+// ===== LOGOUT ======
 function initLogout() {
   const logoutBtn = document.getElementById('logoutBtn');
   if (!logoutBtn) return;
@@ -131,14 +128,14 @@ function initLogout() {
     try {
       localStorage.removeItem('loggedInUser');
       await signOut(auth);
-    } catch (e) { /* ignore */ }
+    } catch (e) {}
     window.location.href = 'login.html';
   });
 }
 
-// ----------------- realtime listeners (all inside function) -----------------
+// ===== REALTIME LISTENERS ======
 function setupRealtimeListeners() {
-  // pending_lessons
+  // Pending Lessons
   if (exists(pendingTableBody) && exists(cardPending)) {
     const pendingQ = query(collection(db, 'pending_lessons'), orderBy('createdAt','desc'));
     onSnapshot(pendingQ, snapshot => {
@@ -162,10 +159,11 @@ function setupRealtimeListeners() {
           </td>`;
         pendingTableBody.appendChild(tr);
       });
+      updatePieChart();
     }, err => console.error('pending listener error:', err));
   }
 
-  // approved lessons
+  // Approved Lessons
   if (exists(approvedTableBody) && exists(cardApproved)) {
     const approvedQ = query(collection(db, 'lessons'), orderBy('createdAt','desc'));
     onSnapshot(approvedQ, snapshot => {
@@ -181,12 +179,11 @@ function setupRealtimeListeners() {
           <td>${l.className}</td>
           <td>${l.projectName}</td>
           <td>${l.lessonNumber}</td>
-          <td>${l.startTime} - ${l.endTime}</td>
-        `;
+          <td>${l.startTime} - ${l.endTime}</td>`;
         approvedTableBody.appendChild(tr);
       });
 
-      // charts (only if barCtx exists)
+      // Bar chart: lessons per teacher
       try {
         const counts = {};
         docs.forEach(d => counts[d.teacherName] = (counts[d.teacherName]||0)+1);
@@ -196,17 +193,17 @@ function setupRealtimeListeners() {
           if (barChart) barChart.destroy();
           barChart = new Chart(barCtx, {
             type: 'bar',
-            data: { labels, datasets:[{ label:'Approved lessons', data: values }]},
+            data: { labels, datasets:[{ label:'Approved lessons', data: values, backgroundColor:'#ffd700' }]},
             options:{ responsive:true }
           });
         }
-      } catch (e) {
-        console.warn('Chart error:', e);
-      }
+      } catch (e) { console.warn('Chart error:', e); }
+
+      updatePieChart();
     }, err => console.error('approved listener error:', err));
   }
 
-  // users -> teachers list
+  // Teachers
   if (exists(teachersTableBody) && exists(teacherSelect) && exists(teacherFilterSelect) && exists(cardTeachers)) {
     const usersQ = collection(db, 'users');
     onSnapshot(usersQ, snapshot => {
@@ -233,11 +230,10 @@ function setupRealtimeListeners() {
         }
       });
       cardTeachers.textContent = teacherCount;
-      if (cardMessages) cardMessages.textContent = ''; // will be set when messages load
     }, err => console.error('users listener error:', err));
   }
 
-  // messages
+  // Messages
   if (exists(sentMessagesUl) && exists(cardMessages)) {
     const messagesQ = query(collection(db, 'messages'), orderBy('date','desc'));
     onSnapshot(messagesQ, snapshot => {
@@ -245,6 +241,24 @@ function setupRealtimeListeners() {
       const msgs = [];
       snapshot.forEach(d => { const m = d.data(); m._id = d.id; msgs.push(m); });
       cardMessages.textContent = msgs.length;
+
+      // Sidebar badge
+      const dashLi = document.querySelector('.sidebar li:nth-child(4) a');
+      if(dashLi){
+        let badge = dashLi.querySelector('.badge');
+        if(!badge){
+          badge = document.createElement('span');
+          badge.className = 'badge';
+          badge.style.background = '#f44336';
+          badge.style.color = '#fff';
+          badge.style.borderRadius = '50%';
+          badge.style.padding = '2px 6px';
+          badge.style.marginLeft = '6px';
+          dashLi.appendChild(badge);
+        }
+        badge.textContent = msgs.length;
+      }
+
       msgs.slice(0,20).forEach(m => {
         const li = document.createElement('li');
         li.textContent = `[${new Date(m.date).toLocaleString()}] To ${m.to || 'All'} — ${m.content}`;
@@ -254,7 +268,7 @@ function setupRealtimeListeners() {
   }
 }
 
-// ----------------- UI actions (approve/reject/view) -----------------
+// ===== UI ACTIONS ======
 function initUIActions() {
   document.addEventListener('click', async (e) => {
     try {
@@ -320,10 +334,7 @@ function initUIActions() {
   });
 }
 
-// ----------------- teacher modal helpers -----------------
-const teacherModal = document.getElementById('teacherModal');
-const teacherModalContent = document.getElementById('teacherModalContent');
-const teacherModalClose = document.getElementById('teacherModalClose');
+// ===== TEACHER MODAL ======
 if (teacherModalClose) teacherModalClose.addEventListener('click', ()=> { if (teacherModal) teacherModal.style.display='none'; });
 
 async function openTeacherModal(teacherId){
@@ -355,7 +366,7 @@ async function openTeacherModalByEmail(email, nameFallback){
   teacherModalContent.innerHTML = html;
 }
 
-// ----------------- controls: send message, export, print, filters -----------------
+// ===== CONTROLS: send message, export, print, filters ======
 function initControls() {
   const messageForm = document.getElementById('messageForm');
   if (messageForm) {
@@ -392,28 +403,216 @@ function initControls() {
   }
 
   const printBtn = document.getElementById('printBtn');
-  if (printBtn) printBtn.addEventListener('click', () => window.print());
+  if (printBtn) printBtn.addEventListener('click', ()=> window.print());
 
-  const refreshBtn = document.getElementById('refreshBtn');
-  if (refreshBtn) refreshBtn.addEventListener('click', () => alert('Dashboard refreshed (real-time listeners active).'));
-
-  const applyFilter = document.getElementById('applyFilter');
-  if (applyFilter) {
-    applyFilter.addEventListener('click', async () => {
-      try {
-        const teacher = (document.getElementById('filterTeacher') || {}).value;
-        const status = (document.getElementById('filterStatus') || {}).value;
-        const approvedSnap = await getDocs(collection(db,'lessons'));
-        if (approvedTableBody) approvedTableBody.innerHTML = '';
-        approvedSnap.forEach(d => {
-          const l = d.data();
-          if (teacher && l.teacherEmail !== teacher) return;
-          if (status && status !== 'approved') return;
-          if (approvedTableBody) approvedTableBody.innerHTML += `<tr><td>${l.visitDate||''}</td><td>${l.teacherName}</td><td>${l.className}</td><td>${l.projectName}</td><td>${l.lessonNumber}</td><td>${l.startTime} - ${l.endTime}</td></tr>`;
-        });
-      } catch (err) { console.error('Filter error:', err); alert('Filter failed: ' + err.message); }
+  const teacherFilter = document.getElementById('filterTeacher');
+  if (teacherFilter) teacherFilter.addEventListener('change', async () => {
+    const email = teacherFilter.value;
+    if (!approvedTableBody) return;
+    approvedTableBody.innerHTML = '';
+    let snap;
+    if (!email) snap = await getDocs(query(collection(db,'lessons'), orderBy('createdAt','desc')));
+    else snap = await getDocs(query(collection(db,'lessons'), where('teacherEmail','==',email), orderBy('createdAt','desc')));
+    snap.forEach(d => {
+      const L = d.data();
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${L.visitDate||''}</td><td>${L.teacherName}</td><td>${L.className}</td><td>${L.projectName}</td><td>${L.lessonNumber}</td><td>${L.startTime}-${L.endTime}</td>`;
+      approvedTableBody.appendChild(tr);
     });
+  });
+}
+
+// ===== EXTRA FEATURES: sidebar toggle + dark mode ======
+function initExtraFeatures() {
+  // Sidebar collapse
+  const sidebar = document.querySelector('.sidebar');
+  const sidebarToggle = document.createElement('button');
+  sidebarToggle.textContent = '☰';
+  sidebarToggle.style.position = 'fixed';
+  sidebarToggle.style.top = '12px';
+  sidebarToggle.style.left = '12px';
+  sidebarToggle.style.zIndex = '100';
+  sidebarToggle.style.background = '#ffd700';
+  sidebarToggle.style.border = 'none';
+  sidebarToggle.style.padding = '6px 10px';
+  sidebarToggle.style.borderRadius = '6px';
+  sidebarToggle.style.cursor = 'pointer';
+  sidebarToggle.style.display = 'none';
+  document.body.appendChild(sidebarToggle);
+
+  function updateSidebarToggle() { sidebarToggle.style.display = window.innerWidth < 992 ? 'block' : 'none'; }
+  updateSidebarToggle();
+  window.addEventListener('resize', updateSidebarToggle);
+
+  sidebarToggle.addEventListener('click', () => {
+    sidebar.classList.toggle('collapsed');
+    if (sidebar.classList.contains('collapsed')) {
+      sidebar.style.width = '60px';
+      document.querySelectorAll('.sidebar .label').forEach(l => l.style.display = 'none');
+      document.querySelector('.main').style.marginLeft = '60px';
+    } else {
+      sidebar.style.width = '220px';
+      document.querySelectorAll('.sidebar .label').forEach(l => l.style.display = 'inline');
+      document.querySelector('.main').style.marginLeft = '220px';
+    }
+  });
+
+  // Dark / light mode toggle
+  const darkToggle = document.createElement('button');
+  darkToggle.textContent = '🌙';
+  darkToggle.style.position = 'fixed';
+  darkToggle.style.top = '12px';
+  darkToggle.style.right = '12px';
+  darkToggle.style.zIndex = '100';
+  darkToggle.style.background = '#ffd700';
+  darkToggle.style.border = 'none';
+  darkToggle.style.padding = '6px 10px';
+  darkToggle.style.borderRadius = '6px';
+  darkToggle.style.cursor = 'pointer';
+  document.body.appendChild(darkToggle);
+
+  let darkMode = true;
+  darkToggle.addEventListener('click', () => {
+    darkMode = !darkMode;
+    document.body.style.background = darkMode ? 'linear-gradient(135deg,#001f4d,#003366)' : '#f5f5f5';
+    document.body.style.color = darkMode ? '#fff' : '#000';
+  });
+}
+
+// ===== PIE CHART: Pending vs Approved ======
+async function updatePieChart() {
+  try {
+    const pendingSnap = await getDocs(collection(db,'pending_lessons'));
+    const approvedSnap = await getDocs(collection(db,'lessons'));
+    const data = [pendingSnap.size, approvedSnap.size];
+    if (pieCtx) {
+      if (pieChart) pieChart.destroy();
+      pieChart = new Chart(pieCtx, {
+        type: 'pie',
+        data: { labels:['Pending','Approved'], datasets:[{ data, backgroundColor:['#f44336','#4CAF50'] }] },
+        options:{ responsive:true }
+      });
+    }
+  } catch(e) { console.error('Pie chart error:', e); }
+}
+ 
+
+// ===== INVENTORY TABLES ======
+const kitsTableBody = document.querySelector("#kitsTable tbody");
+const tabletKitsTableBody = document.querySelector("#tabletKitsTable tbody");
+const classKitsTableBody = document.querySelector("#classKitsTable tbody");
+const affectedTableBody = document.querySelector("#affectedTable tbody");
+const missingTableBody = document.querySelector("#missingTable tbody");
+
+async function loadInventory() {
+  try {
+    // General Kits
+    if (kitsTableBody) {
+      const snap = await getDocs(collection(db, "kits"));
+      kitsTableBody.innerHTML = "";
+      snap.forEach(doc => {
+        const d = doc.data();
+        kitsTableBody.innerHTML += `
+          <tr>
+            <td>${d.name}</td>
+            <td>${d.totalQuantity}</td>
+            <td>${d.availableQuantity}</td>
+            <td><button class="small-btn view-btn" onclick="alert('View ${d.name}')">View</button></td>
+          </tr>`;
+      });
+    }
+
+    // Tablet Kits
+    if (tabletKitsTableBody) {
+      const snap = await getDocs(collection(db, "tabletKits"));
+      tabletKitsTableBody.innerHTML = "";
+      snap.forEach(doc => {
+        const d = doc.data();
+        tabletKitsTableBody.innerHTML += `
+          <tr>
+            <td>${d.name}</td>
+            <td>${d.totalQuantity}</td>
+            <td>${d.availableQuantity}</td>
+          </tr>`;
+      });
+    }
+
+    // Class Kits
+    if (classKitsTableBody) {
+      const snap = await getDocs(collection(db, "classKits"));
+      classKitsTableBody.innerHTML = "";
+      snap.forEach(doc => {
+        const d = doc.data();
+        classKitsTableBody.innerHTML += `
+          <tr>
+            <td>${d.name}</td>
+            <td>${d.class}</td>
+            <td>${d.totalQuantity}</td>
+            <td>${d.availableQuantity}</td>
+          </tr>`;
+      });
+    }
+
+    // Affected / Damaged Kits
+    if (affectedTableBody) {
+      const snap = await getDocs(collection(db, "affectedKits"));
+      affectedTableBody.innerHTML = "";
+      snap.forEach(doc => {
+        const d = doc.data();
+        affectedTableBody.innerHTML += `
+          <tr>
+            <td>${d.name}</td>
+            <td>${d.type}</td>
+            <td>${d.notes}</td>
+            <td>${d.date}</td>
+          </tr>`;
+      });
+    }
+
+    // Missing Kit Components
+    if (missingTableBody) {
+      const snap = await getDocs(collection(db, "missingComponents"));
+      missingTableBody.innerHTML = "";
+      snap.forEach(doc => {
+        const d = doc.data();
+        missingTableBody.innerHTML += `
+          <tr>
+            <td>${d.componentName}</td>
+            <td>${d.kitName}</td>
+            <td>${d.notes}</td>
+            <td>${d.date}</td>
+          </tr>`;
+      });
+    }
+
+  } catch (err) {
+    console.error("Inventory load error:", err);
   }
 }
 
-// ----------------- done -----------------
+// Call inventory loader inside setupRealtimeListeners to auto-update
+setupRealtimeListeners = (function(origFn){
+  return function() {
+    origFn();
+    loadInventory();
+  }
+})(setupRealtimeListeners);
+
+
+
+// ===== SEND NOTIFICATION =====
+async function sendNotification(to, message) {
+  if (!loggedInUser) return alert('Not logged in');
+  try {
+    await addDoc(collection(db, 'messages'), {
+      from: loggedInUser.email,
+      to,
+      content: message,
+      date: new Date().toISOString()
+    });
+    alert('Notification sent!');
+  } catch(err) {
+    console.error(err);
+    alert('Failed to send notification: ' + err.message);
+  }
+}

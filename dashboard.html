@@ -1,862 +1,125 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Admin Dashboard | Lab Inventory System</title>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard</title>
+  <!-- Material Icons -->
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <!-- Material-style CSS -->
+  <link rel="stylesheet" href="dashboard.css">
   <style>
-    /* ===== GENERAL ===== */
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-  font-family: 'Poppins', sans-serif;
-}
+    /* Reset */
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Roboto', sans-serif; }
 
-body {
-  background: linear-gradient(135deg, #001f4d, #003366);
-  color: #fff;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: row;
-}
+/* Dashboard Container */
+.dashboard-container { display: flex; height: 100vh; background: #f5f5f5; }
 
-/* ===== SIDEBAR ===== */
+/* Sidebar */
 .sidebar {
-  flex: 0 0 220px; /* fixed width on desktop */
-  position: fixed;
-  top: 0;
-  left: 0;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.85);
-  padding-top: 30px;
+  width: 220px;
+  background-color: #1976d2;
+  color: white;
   display: flex;
   flex-direction: column;
-}
-
-.sidebar .logo {
-  text-align: center;
-  font-size: 24px;
-  font-weight: bold;
-  margin-bottom: 20px;
-  color: #ffd700;
-}
-
-.sidebar ul {
-  list-style: none;
-  padding-left: 0;
-}
-
-.sidebar ul li {
-  padding: 12px 18px;
-}
-
-.sidebar ul li a {
-  color: #fff;
-  text-decoration: none;
-  display: block;
-  transition: 0.3s;
-}
-
-.sidebar ul li a:hover,
-.sidebar ul li.active a {
-  background: #ffd700;
-  color: #003366;
-  border-radius: 8px;
-}
-
-/* ===== MAIN CONTENT ===== */
-.main-content {
-  flex: 1;
-  margin-left: 220px;
   padding: 20px;
-  display: flex;
-  flex-direction: column;
 }
-
-header {
+.sidebar h2.logo { font-size: 20px; margin-bottom: 20px; }
+.sidebar-menu li {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
-}
-
-header h1 {
-  font-size: 24px;
-  color: #ffd700;
-}
-
-.profile-name {
-  margin-bottom: 10px;
-  font-weight: bold;
-  color: #ffd700;
-}
-
-/* ===== TABLES ===== */
-.table-container {
-  width: 100%;
-  overflow-x: auto;
-  margin-bottom: 20px;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-  background: rgba(255, 255, 255, 0.05);
-  min-width: 600px; /* scrolls on smaller screens */
-}
-
-table th,
-table td {
-  padding: 10px 12px;
-  text-align: left;
-}
-
-table th {
-  background: rgba(255, 215, 0, 0.8);
-  color: #003366;
-  font-weight: bold;
-}
-
-table tr:nth-child(even) {
-  background: rgba(255, 255, 255, 0.04);
-}
-
-button {
-  padding: 8px 12px;
-  font-size: 14px;
-  font-weight: 600;
-  color: #003366;
-  background: linear-gradient(135deg, #ffd700, #ffcc00);
-  border: none;
-  border-radius: 8px;
+  padding: 12px 8px;
   cursor: pointer;
+  border-radius: 4px;
   transition: 0.2s;
 }
+.sidebar-menu li span.material-icons { margin-right: 10px; }
+.sidebar-menu li:hover { background: rgba(255,255,255,0.2); }
 
-button:hover {
-  transform: translateY(-2px);
-}
+/* Main Content */
+.main-content { flex: 1; padding: 20px; overflow-y: auto; }
+header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.btn { background: #1976d2; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; }
+.btn:hover { background: #155fa0; }
 
-.btn-danger {
-  background: #ff6666;
-  color: #fff;
-}
+/* Cards */
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 20px; margin-bottom: 30px; }
+.card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0px 2px 6px rgba(0,0,0,0.15); text-align: center; }
 
-.btn-small {
-  padding: 6px 8px;
-  font-size: 13px;
-  border-radius: 6px;
-}
+/* Charts */
+.charts { display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 30px; }
+.charts canvas { background: white; padding: 15px; border-radius: 8px; flex: 1; }
 
-/* ===== SECTIONS & FLEX ===== */
-.section {
-  background: rgba(255, 255, 255, 0.02);
-  padding: 14px;
-  border-radius: 10px;
-  margin-bottom: 18px;
-}
-
-.flex {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.col-3 {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.col-3 > * {
-  flex: 1 1 300px; /* minimum 300px, grows to fit */
-}
-
-.hidden {
-  display: none;
-}
-
-.form-row {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-bottom: 8px;
-}
-
-.form-row input,
-.form-row select {
-  padding: 8px;
-  border-radius: 6px;
-  border: 0;
-  min-width: 120px;
-  flex: 1 1 120px;
-}
-
-.small {
-  font-size: 13px;
-  color: #ddd;
-}
-
-/* ===== MEDIA QUERIES ===== */
-@media (max-width: 900px) {
-  .sidebar {
-    width: 60px;
-    flex-direction: row;
-    overflow-x: auto;
-    padding: 10px;
-  }
-
-  .sidebar ul {
-    display: flex;
-    flex-direction: row;
-    gap: 8px;
-  }
-
-  .sidebar ul li {
-    padding: 6px 10px;
-  }
-
-  .main-content {
-    margin-left: 60px;
-    padding: 12px;
-  }
-
-  .col-3 {
-    flex-direction: column;
-  }
-}
-
-@media (max-width: 600px) {
-  table, thead, tbody, th, td, tr { display: block; }
-  table thead { display: none; }
-  table tr { margin-bottom: 15px; padding: 15px; border-radius: 10px; background: rgba(255,255,255,0.04); }
-  table td {
-    text-align: right;
-    padding-left: 50%;
-    position: relative;
-  }
-  table td::before {
-    content: attr(data-label);
-    position: absolute;
-    left: 15px;
-    width: 45%;
-    text-align: left;
-    font-weight: bold;
-    color: #ffd700;
-  }
-}
+/* Messages */
+.recent-messages { background: white; padding: 20px; border-radius: 8px; }
+.messages-container { max-height: 300px; overflow-y: auto; margin-top: 10px; }
+.messages-container div { padding: 10px; border-bottom: 1px solid #eee; }
+.messages-container div strong { color: #1976d2; }
 
   </style>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
-  <nav class="sidebar">
-    <div class="logo">🧠 LabSystem</div>
-    <ul>
-      <li class="active"><a href="#">Dashboard</a></li>
-      <li><a href="#">Inventory</a></li>
-      <li><a href="teachers.html">Teachers</a></li>
-      <li><a href="#kitsSection">Kits / Data</a></li>
-      <li><a href="#">Reports</a></li>
-    </ul>
-  </nav>
+  <div class="dashboard-container">
 
-  <main class="main-content">
-    <div class="profile-name">Welcome, <span id="userName"></span></div>
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <h2 class="logo">Lab Management</h2>
+      <ul class="sidebar-menu">
+        <li><span class="material-icons">dashboard</span> Dashboard</li>
+        <li><span class="material-icons">school</span> Lessons</li>
+        <li><span class="material-icons">inventory</span> Kits</li>
+        <li><span class="material-icons">message</span> Messages</li>
+        <li><span class="material-icons">person</span> Teachers</li>
+        <li id="logoutBtn"><span class="material-icons">logout</span> Logout</li>
+      </ul>
+    </aside>
 
-    <header>
-      <h1>Lab Management Dashboard</h1>
-      <div class="flex">
-        <button id="viewDashboardBtn">Refresh Dashboard</button>
-        <button id="logoutBtn">Logout</button>
-      </div>
-    </header>
+    <!-- Main Content -->
+    <main class="main-content">
+      <header>
+        <h1>Welcome, <span id="userName">Admin</span></h1>
+        <button id="refreshAll" class="btn">Refresh</button>
+      </header>
 
-    <!-- LESSONS / ADMIN CONTROLS -->
-    <section id="lessonsSection" class="section">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-        <h2 style="margin:0">Lessons</h2>
-        <div class="flex">
-          <button id="toggleAddLesson">➕ Add Lesson</button>
+      <!-- Dashboard Cards -->
+      <section class="cards">
+        <div class="card">
+          <h3>Total Lessons</h3>
+          <p id="totalLessons">0</p>
         </div>
-      </div>
-
-      <div id="addLessonForm" class="hidden" style="margin-bottom:12px">
-        <div class="form-row">
-          <input id="lessonClass" placeholder="Class (e.g., Grade 7 Blue)">
-          <input id="lessonProject" placeholder="Project">
-          <input id="lessonDate" type="date">
+        <div class="card">
+          <h3>Total Class Kits</h3>
+          <p id="totalClassKits">0</p>
         </div>
-        <div class="form-row">
-          <select id="lessonTeacherSelect"><option value="">Select teacher</option></select>
-          <input id="lessonStudents" type="number" placeholder="Students">
-          <button id="saveLessonBtn">Save Lesson</button>
+        <div class="card">
+          <h3>Total Tablets</h3>
+          <p id="totalTablets">0</p>
         </div>
-      </div>
-
-      <table id="currentLessons">
-        <thead><tr><th>Date</th><th>Class</th><th>Project</th><th>Teacher</th><th>Students</th><th>Actions</th></tr></thead>
-        <tbody></tbody>
-      </table>
-    </section>
-
-    <!-- MESSAGES & ASSIGN CLASS -->
-    <section id="commSection" class="section">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-        <h2 style="margin:0">Communication</h2>
-      </div>
-
-      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px">
-        <div style="flex:1;min-width:260px">
-          <h4 class="small">Send message to teacher</h4>
-          <div class="form-row">
-            <select id="messageTeacherSelect"><option value="">Select teacher (or choose broadcast below)</option></select>
-            <select id="broadcastSelect">
-              <option value="">-- or broadcast --</option>
-              <option value="teachers">All Teachers</option>
-              <option value="all">All Users</option>
-            </select>
-          </div>
-          <div class="form-row">
-            <input id="messageText" placeholder="Message text" style="flex:1" />
-            <button id="sendMessageBtn">Send</button>
-          </div>
+        <div class="card">
+          <h3>Total Competition Kits</h3>
+          <p id="totalCompKits">0</p>
         </div>
+      </section>
 
-        <div style="flex:1;min-width:260px">
-          <h4 class="small">Assign class to teacher</h4>
-          <div class="form-row">
-            <select id="assignTeacherSelect"><option value="">Select teacher</option></select>
-            <input id="assignClassName" placeholder="Class name (e.g., Grade 7 Blue)">
-            <button id="assignClassBtn">Assign</button>
-          </div>
-        </div>
-      </div>
+      <!-- Charts -->
+      <section class="charts">
+        <canvas id="barChart"></canvas>
+        <canvas id="pieChart"></canvas>
+      </section>
 
-      <div>
-        <h4 class="small">Recent messages</h4>
-        <div id="recentMessages" style="max-height:220px;overflow:auto;padding:8px;border-radius:8px;background:rgba(255,255,255,0.02)"></div>
-      </div>
-    </section>
+      <!-- Recent Messages -->
+      <section class="recent-messages">
+        <h2>Recent Messages</h2>
+        <div id="recentMessages" class="messages-container"></div>
+      </section>
 
-    <!-- KITS / DATA -->
-    <section id="kitsSection" class="section">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-        <h2 style="margin:0">Kits / Data</h2>
-        <div class="flex">
-          <button id="refreshAll">Refresh</button>
-        </div>
-      </div>
+    </main>
+  </div>
 
-      <div class="col-3">
-        <!-- Class Kits -->
-        <div>
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-            <h3 style="margin:0;font-size:16px">Class Kits</h3>
-            <button id="addClassKitBtn">➕ Add</button>
-          </div>
-
-          <form id="classKitForm" class="hidden" style="margin-bottom:8px">
-            <div class="form-row">
-              <input id="ck_name" placeholder="Kit Name" />
-              <input id="ck_type" placeholder="Kit Type" />
-            </div>
-            <div class="form-row">
-              <input id="ck_quantity" type="number" placeholder="Quantity" min="0" />
-              <select id="ck_condition"><option>Good</option><option>Needs Repair</option><option>Broken</option></select>
-              <input id="ck_assignedClass" placeholder="Assigned Class (opt)" />
-            </div>
-            <div style="display:flex;gap:8px">
-              <button id="saveClassKit" class="btn-small">Save</button>
-              <button id="cancelClassKit" type="button" class="btn-small btn-danger">Cancel</button>
-            </div>
-          </form>
-
-          <table id="classKitsTable">
-            <thead><tr><th>Name</th><th>Type</th><th>Qty</th><th>Condition</th><th>Assigned Class</th><th>Actions</th></tr></thead>
-            <tbody></tbody>
-          </table>
-        </div>
-
-        <!-- Tablets -->
-        <div>
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-            <h3 style="margin:0;font-size:16px">Tablets</h3>
-            <button id="addTabletBtn">➕ Add</button>
-          </div>
-
-          <form id="tabletForm" class="hidden" style="margin-bottom:8px">
-            <div class="form-row">
-              <input id="tb_id" placeholder="Tablet ID / Number" />
-              <input id="tb_model" placeholder="Model" />
-            </div>
-            <div class="form-row">
-              <select id="tb_status"><option>Available</option><option>In Use</option><option>Broken</option><option>Missing</option></select>
-              <input id="tb_assignedClass" placeholder="Assigned Class (opt)" />
-              <input id="tb_notes" placeholder="Notes" />
-            </div>
-            <div style="display:flex;gap:8px">
-              <button id="saveTablet" class="btn-small">Save</button>
-              <button id="cancelTablet" type="button" class="btn-small btn-danger">Cancel</button>
-            </div>
-          </form>
-
-          <table id="tabletsTable">
-            <thead><tr><th>ID</th><th>Model</th><th>Status</th><th>Assigned Class</th><th>Notes</th><th>Actions</th></tr></thead>
-            <tbody></tbody>
-          </table>
-        </div>
-
-        <!-- Competition Kits -->
-        <div>
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-            <h3 style="margin:0;font-size:16px">Competition Kits</h3>
-            <button id="addCompKitBtn">➕ Add</button>
-          </div>
-
-          <form id="compKitForm" class="hidden" style="margin-bottom:8px">
-            <div class="form-row">
-              <input id="ck_name2" placeholder="Kit Name" />
-              <input id="ck_category" placeholder="Category" />
-            </div>
-            <div class="form-row">
-              <input id="ck_quantity2" type="number" placeholder="Quantity" min="0" />
-              <select id="ck_condition2"><option>Good</option><option>Needs Repair</option><option>Broken</option></select>
-              <input id="ck_notes2" placeholder="Notes / Assigned Team" />
-            </div>
-            <div style="display:flex;gap:8px">
-              <button id="saveCompKit" class="btn-small">Save</button>
-              <button id="cancelCompKit" type="button" class="btn-small btn-danger">Cancel</button>
-            </div>
-          </form>
-
-          <table id="compKitsTable">
-            <thead><tr><th>Name</th><th>Category</th><th>Qty</th><th>Condition</th><th>Notes</th><th>Actions</th></tr></thead>
-            <tbody></tbody>
-          </table>
-        </div>
-      </div>
-    </section>
-
-    <!-- Charts -->
-    <section class="section">
-      <h2 class="small">Inventory Overview</h2>
-      <div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:12px">
-        <canvas id="barChart" width="320" height="200"></canvas>
-        <canvas id="pieChart" width="320" height="200"></canvas>
-      </div>
-    </section>
-  </main>
-
-  <!-- Firebase + App Script -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-    import {
-      getAuth, signOut
-    } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
-    import {
-      getFirestore, collection, getDocs, addDoc, onSnapshot,
-      doc, updateDoc, deleteDoc, query, where, orderBy
-    } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
-
-    // ====== FIREBASE CONFIG - replace values if different ======
-    const firebaseConfig = {
-      apiKey: "AIzaSyDe9fXCUSpTFw0VSq_ppzRqOjhkCDIHDXY",
-      authDomain: "lab-management-system-9a96e.firebaseapp.com",
-      projectId: "lab-management-system-9a96e",
-      storageBucket: "lab-management-system-9a96e.appspot.com",
-      messagingSenderId: "460300647867",
-      appId: "1:460300647867:web:2a626aced15605dd63989e"
-    };
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    const auth = getAuth(app);
-
-    // ====== DOM refs ======
-    const userName = document.getElementById('userName');
-    const logoutBtn = document.getElementById('logoutBtn');
-    const viewDashboardBtn = document.getElementById('viewDashboardBtn');
-    const refreshAll = document.getElementById('refreshAll');
-
-    // lessons
-    const toggleAddLesson = document.getElementById('toggleAddLesson');
-    const addLessonForm = document.getElementById('addLessonForm');
-    const lessonClass = document.getElementById('lessonClass');
-    const lessonProject = document.getElementById('lessonProject');
-    const lessonDate = document.getElementById('lessonDate');
-    const lessonTeacherSelect = document.getElementById('lessonTeacherSelect');
-    const lessonStudents = document.getElementById('lessonStudents');
-    const saveLessonBtn = document.getElementById('saveLessonBtn');
-    const currentLessonsTbody = document.querySelector('#currentLessons tbody');
-
-    // teachers selects & messages
-    const messageTeacherSelect = document.getElementById('messageTeacherSelect');
-    const broadcastSelect = document.getElementById('broadcastSelect');
-    const messageText = document.getElementById('messageText');
-    const sendMessageBtn = document.getElementById('sendMessageBtn');
-    const recentMessagesDiv = document.getElementById('recentMessages');
-
-    const assignTeacherSelect = document.getElementById('assignTeacherSelect');
-    const assignClassName = document.getElementById('assignClassName');
-    const assignClassBtn = document.getElementById('assignClassBtn');
-
-    // kits refs
-    const addClassKitBtn = document.getElementById('addClassKitBtn');
-    const classKitForm = document.getElementById('classKitForm');
-    const ck_name = document.getElementById('ck_name');
-    const ck_type = document.getElementById('ck_type');
-    const ck_quantity = document.getElementById('ck_quantity');
-    const ck_condition = document.getElementById('ck_condition');
-    const ck_assignedClass = document.getElementById('ck_assignedClass');
-    const classKitsTable = document.querySelector('#classKitsTable tbody');
-    const saveClassKit = document.getElementById('saveClassKit');
-    const cancelClassKit = document.getElementById('cancelClassKit');
-
-    const addTabletBtn = document.getElementById('addTabletBtn');
-    const tabletForm = document.getElementById('tabletForm');
-    const tb_id = document.getElementById('tb_id');
-    const tb_model = document.getElementById('tb_model');
-    const tb_status = document.getElementById('tb_status');
-    const tb_assignedClass = document.getElementById('tb_assignedClass');
-    const tb_notes = document.getElementById('tb_notes');
-    const tabletsTable = document.querySelector('#tabletsTable tbody');
-    const saveTablet = document.getElementById('saveTablet');
-    const cancelTablet = document.getElementById('cancelTablet');
-
-    const addCompKitBtn = document.getElementById('addCompKitBtn');
-    const compKitForm = document.getElementById('compKitForm');
-    const ck_name2 = document.getElementById('ck_name2');
-    const ck_category = document.getElementById('ck_category');
-    const ck_quantity2 = document.getElementById('ck_quantity2');
-    const ck_condition2 = document.getElementById('ck_condition2');
-    const ck_notes2 = document.getElementById('ck_notes2');
-    const compKitsTable = document.querySelector('#compKitsTable tbody');
-    const saveCompKit = document.getElementById('saveCompKit');
-    const cancelCompKit = document.getElementById('cancelCompKit');
-
-    // edit states
-    let editingClassKitId = null;
-    let editingTabletId = null;
-    let editingCompKitId = null;
-
-    // ====== ADMIN AUTH CHECK (your existing method) ======
-    const loggedInUser = JSON.parse(localStorage.getItem('loggedInUser'));
-    if(!loggedInUser || loggedInUser.role !== 'admin'){
-      alert('Access denied. Please log in as admin.');
-      window.location.href = 'login.html';
-    } else {
-      userName.textContent = loggedInUser.name || loggedInUser.email || 'Admin';
-    }
-
-    // ====== Helpers ======
-    function toggle(el, show) { if(!el) return; el.classList.toggle('hidden', !show); }
-    function clearClassKit(){ ck_name.value=''; ck_type.value=''; ck_quantity.value=''; ck_condition.value='Good'; ck_assignedClass.value=''; editingClassKitId = null; }
-    function clearTablet(){ tb_id.value=''; tb_model.value=''; tb_status.value='Available'; tb_assignedClass.value=''; tb_notes.value=''; editingTabletId = null; }
-    function clearCompKit(){ ck_name2.value=''; ck_category.value=''; ck_quantity2.value=''; ck_condition2.value='Good'; ck_notes2.value=''; editingCompKitId = null; }
-    function formatDate(d){ try{ return new Date(d).toLocaleDateString(); } catch(e){ return d } }
-
-    // ====== Populate teacher selects (from users collection where role == 'teacher') ======
-    async function loadTeachersSelects(){
-      messageTeacherSelect.innerHTML = '<option value=\"\">-- Select teacher --</option>';
-      assignTeacherSelect.innerHTML = '<option value=\"\">-- Select teacher --</option>';
-      lessonTeacherSelect.innerHTML = '<option value=\"\">-- Select teacher --</option>';
-
-      const q = query(collection(db, 'users'), where('role','==','teacher'), orderBy('name'));
-      onSnapshot(q, snap => {
-        messageTeacherSelect.innerHTML = '<option value=\"\">-- Select teacher --</option>';
-        assignTeacherSelect.innerHTML = '<option value=\"\">-- Select teacher --</option>';
-        lessonTeacherSelect.innerHTML = '<option value=\"\">-- Select teacher --</option>';
-        snap.forEach(docSnap => {
-          const d = docSnap.data();
-          const email = d.email || docSnap.id;
-          const name = d.name || email;
-          const opt = `<option value=\"${email}\">${name} (${email})</option>`;
-          messageTeacherSelect.insertAdjacentHTML('beforeend', opt);
-          assignTeacherSelect.insertAdjacentHTML('beforeend', opt);
-          lessonTeacherSelect.insertAdjacentHTML('beforeend', opt);
-        });
-      }, err => {
-        console.error('loadTeachersSelects error', err);
-      });
-    }
-
-    loadTeachersSelects();
-
-    // ====== LESSONS CRUD (simple add + display) ======
-    toggleAddLesson.addEventListener('click', ()=> toggle(addLessonForm, true));
-    saveLessonBtn.addEventListener('click', async ()=>{
-      const payload = {
-        class: lessonClass.value.trim(),
-        project: lessonProject.value.trim(),
-        date: lessonDate.value,
-        teacherEmail: lessonTeacherSelect.value,
-        teacherName: lessonTeacherSelect.options[lessonTeacherSelect.selectedIndex]?.text || '',
-        students: parseInt(lessonStudents.value) || 0,
-        createdAt: new Date().toISOString()
-      };
-      if(!payload.class || !payload.project || !payload.date){ return alert('Enter class, project and date.'); }
-      try {
-        await addDoc(collection(db, 'lessons'), payload);
-        alert('Lesson added.');
-        lessonClass.value=''; lessonProject.value=''; lessonDate.value=''; lessonStudents.value=''; lessonTeacherSelect.value='';
-      } catch(err){ console.error(err); alert('Error adding lesson: '+err.message); }
-    });
-
-    // realtime listener to display lessons
-    onSnapshot(collection(db, 'lessons'), snap => {
-      currentLessonsTbody.innerHTML = '';
-      snap.forEach(docSnap => {
-        const d = docSnap.data();
-        const id = docSnap.id;
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${d.date || ''}</td>
-          <td>${d.class || ''}</td>
-          <td>${d.project || ''}</td>
-          <td>${d.teacherName || d.teacher || ''}</td>
-          <td>${d.students || ''}</td>
-          <td>
-            <button data-id="${id}" class="btn-small" data-action="edit-lesson">Edit</button>
-            <button data-id="${id}" class="btn-small btn-danger" data-action="delete-lesson">Delete</button>
-          </td>
-        `;
-        currentLessonsTbody.appendChild(tr);
-      });
-    }, err => console.error('lessons listener err', err));
-
-    // delegate lesson edit/delete (simple delete)
-    currentLessonsTbody.addEventListener('click', async (e) => {
-      const btn = e.target.closest('button'); if(!btn) return;
-      const id = btn.dataset.id;
-      if(btn.dataset.action === 'delete-lesson'){
-        if(confirm('Delete this lesson?')) {
-          try { await deleteDoc(doc(db, 'lessons', id)); } catch(err){ alert('Delete failed: '+err.message) }
-        }
-      }
-    });
-
-    // ====== MESSAGES (send & list) ======
-    sendMessageBtn.addEventListener('click', async ()=>{
-      const selectedTeacher = messageTeacherSelect.value;
-      const broadcast = broadcastSelect.value;
-      const content = messageText.value.trim();
-      if(!content) return alert('Enter message text.');
-      const to = broadcast || (selectedTeacher || ''); // if empty -> will be empty and saved as '' (avoid)
-      try{
-        await addDoc(collection(db, 'messages'), {
-          from: loggedInUser.email || 'admin',
-          fromName: loggedInUser.name || loggedInUser.email || 'Admin',
-          to: to || 'all',
-          content,
-          date: new Date().toISOString()
-        });
-        messageText.value = '';
-        alert('Message sent.');
-      }catch(err){ console.error(err); alert('Send failed: '+err.message); }
-    });
-
-    // Recent messages for admin view (broadcasts + personal to admin)
-    const qRecent = query(collection(db, 'messages'), orderBy('date','desc'));
-    onSnapshot(qRecent, snap => {
-      recentMessagesDiv.innerHTML = '';
-      snap.forEach(docSnap => {
-        const m = docSnap.data();
-        const el = document.createElement('div');
-        el.style.padding = '6px 8px';
-        el.style.borderBottom = '1px solid rgba(255,255,255,0.03)';
-        el.innerHTML = `<strong>${m.fromName || m.from || 'Admin'}</strong><div class="small">${m.content}</div><div class="small">To: ${m.to}</div>`;
-        recentMessagesDiv.appendChild(el);
-      });
-    }, err => console.error('messages listener err', err));
-
-    // ====== Assign class to teacher (classesAssigned/{teacherEmail}) ======
-    assignClassBtn.addEventListener('click', async ()=>{
-      const teacherEmail = assignTeacherSelect.value;
-      const className = assignClassName.value.trim();
-      if(!teacherEmail || !className) return alert('Select teacher and enter class name.');
-      try{
-        await updateDoc(doc(db, 'classesAssigned', teacherEmail), { className }, { merge: true })
-          .catch(async (e) => {
-            // if update fails because doc doesn't exist -> setDoc
-            await addDoc(collection(db, 'classesAssigned'), { id: teacherEmail, className });
-          });
-        // Better: use setDoc to ensure doc id equals teacher email:
-        // await setDoc(doc(db, 'classesAssigned', teacherEmail), { className }, { merge: true });
-        // But using updateDoc + fallback works across environments.
-        alert('Class assigned to teacher.');
-        assignClassName.value = '';
-      }catch(err){ console.error(err); alert('Assign failed: '+err.message); }
-    });
-
-    // ====== KITS CRUD using nested collections: kits -> classKits/tablets/competitionKits -> items ======
-    // --- Class Kits ---
-    addClassKitBtn.addEventListener('click', ()=> toggle(classKitForm, true));
-    cancelClassKit.addEventListener('click', ()=> { toggle(classKitForm, false); clearClassKit(); });
-
-    saveClassKit.addEventListener('click', async ()=>{
-      const payload = {
-        name: ck_name.value.trim(),
-        type: ck_type.value.trim(),
-        quantity: parseInt(ck_quantity.value) || 0,
-        condition: ck_condition.value || 'Good',
-        assignedClass: ck_assignedClass.value.trim() || ''
-      };
-      if(!payload.name || !payload.type) return alert('Enter name and type.');
-      try{
-        if(editingClassKitId){
-          await updateDoc(doc(db, 'kits', 'classKits', 'items', editingClassKitId), payload);
-        } else {
-          await addDoc(collection(db, 'kits', 'classKits', 'items'), payload);
-        }
-        clearClassKit();
-        toggle(classKitForm, false);
-      }catch(err){ console.error(err); alert('Save failed: '+err.message); }
-    });
-
-    onSnapshot(collection(db, 'kits', 'classKits', 'items'), snap => {
-      classKitsTable.innerHTML = '';
-      snap.forEach(docSnap => {
-        const d = docSnap.data(); const id = docSnap.id;
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${d.name||''}</td><td>${d.type||''}</td><td>${d.quantity||0}</td><td>${d.condition||''}</td><td>${d.assignedClass||''}</td>
-          <td>
-            <button data-id="${id}" data-action="edit-ck" class="btn-small">Edit</button>
-            <button data-id="${id}" data-action="delete-ck" class="btn-small btn-danger">Delete</button>
-          </td>`;
-        classKitsTable.appendChild(tr);
-      });
-    }, err => console.error('classKits listener err', err));
-
-    classKitsTable.addEventListener('click', async (e)=>{
-      const btn = e.target.closest('button'); if(!btn) return;
-      const id = btn.dataset.id; if(btn.dataset.action === 'edit-ck'){
-        const ref = doc(db, 'kits', 'classKits', 'items', id);
-        const snap = await (await import('https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js')).getDoc(ref);
-        const data = snap.data(); editingClassKitId = id;
-        ck_name.value = data.name||''; ck_type.value = data.type||''; ck_quantity.value = data.quantity||0; ck_condition.value = data.condition||'Good'; ck_assignedClass.value = data.assignedClass||'';
-        toggle(classKitForm, true);
-      } else if(btn.dataset.action === 'delete-ck'){
-        if(confirm('Delete kit?')) { try{ await deleteDoc(doc(db,'kits','classKits','items',id)); } catch(err){ alert('Delete failed: '+err.message) } }
-      }
-    });
-
-    // --- Tablets ---
-    addTabletBtn.addEventListener('click', ()=> toggle(tabletForm, true));
-    cancelTablet.addEventListener('click', ()=> { toggle(tabletForm, false); clearTablet(); });
-
-    saveTablet.addEventListener('click', async ()=>{
-      const payload = {
-        tabletId: tb_id.value.trim(),
-        model: tb_model.value.trim(),
-        status: tb_status.value,
-        assignedClass: tb_assignedClass.value.trim() || '',
-        notes: tb_notes.value.trim() || ''
-      };
-      if(!payload.tabletId) return alert('Enter tablet ID.');
-      try{
-        if(editingTabletId){
-          await updateDoc(doc(db, 'kits', 'tablets', 'items', editingTabletId), payload);
-        } else {
-          await addDoc(collection(db, 'kits', 'tablets', 'items'), payload);
-        }
-        clearTablet(); toggle(tabletForm,false);
-      }catch(err){ console.error(err); alert('Tablet save failed: '+err.message); }
-    });
-
-    onSnapshot(collection(db, 'kits', 'tablets', 'items'), snap => {
-      tabletsTable.innerHTML = '';
-      snap.forEach(docSnap => {
-        const d = docSnap.data(); const id = docSnap.id;
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${d.tabletId||''}</td><td>${d.model||''}</td><td>${d.status||''}</td><td>${d.assignedClass||''}</td><td>${d.notes||''}</td>
-          <td><button data-id="${id}" data-action="edit-tb" class="btn-small">Edit</button><button data-id="${id}" data-action="delete-tb" class="btn-small btn-danger">Delete</button></td>`;
-        tabletsTable.appendChild(tr);
-      });
-    }, err => console.error('tablets listener err', err));
-
-    tabletsTable.addEventListener('click', async (e)=>{
-      const btn = e.target.closest('button'); if(!btn) return;
-      const id = btn.dataset.id; if(btn.dataset.action === 'edit-tb'){
-        const ref = doc(db,'kits','tablets','items',id);
-        const snap = await (await import('https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js')).getDoc(ref);
-        const data = snap.data(); editingTabletId = id;
-        tb_id.value = data.tabletId||''; tb_model.value = data.model||''; tb_status.value = data.status||'Available'; tb_assignedClass.value = data.assignedClass||''; tb_notes.value = data.notes||'';
-        toggle(tabletForm,true);
-      } else if(btn.dataset.action === 'delete-tb'){
-        if(confirm('Delete tablet?')) { try{ await deleteDoc(doc(db,'kits','tablets','items',id)); } catch(err){ alert('Delete failed: '+err.message) } }
-      }
-    });
-
-    // --- Competition Kits ---
-    addCompKitBtn.addEventListener('click', ()=> toggle(compKitForm, true));
-    cancelCompKit.addEventListener('click', ()=> { toggle(compKitForm, false); clearCompKit(); });
-
-    saveCompKit.addEventListener('click', async ()=>{
-      const payload = {
-        name: ck_name2.value.trim(),
-        category: ck_category.value.trim(),
-        quantity: parseInt(ck_quantity2.value) || 0,
-        condition: ck_condition2.value || 'Good',
-        notes: ck_notes2.value.trim() || ''
-      };
-      if(!payload.name) return alert('Enter name.');
-      try{
-        if(editingCompKitId){
-          await updateDoc(doc(db,'kits','competitionKits','items',editingCompKitId), payload);
-        } else {
-          await addDoc(collection(db,'kits','competitionKits','items'), payload);
-        }
-        clearCompKit(); toggle(compKitForm,false);
-      }catch(err){ console.error(err); alert('Save failed: '+err.message); }
-    });
-
-    onSnapshot(collection(db,'kits','competitionKits','items'), snap => {
-      compKitsTable.innerHTML = '';
-      snap.forEach(docSnap => {
-        const d = docSnap.data(); const id = docSnap.id;
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${d.name||''}</td><td>${d.category||''}</td><td>${d.quantity||0}</td><td>${d.condition||''}</td><td>${d.notes||''}</td>
-          <td><button data-id="${id}" data-action="edit-ck2" class="btn-small">Edit</button><button data-id="${id}" data-action="delete-ck2" class="btn-small btn-danger">Delete</button></td>`;
-        compKitsTable.appendChild(tr);
-      });
-    }, err => console.error('comp kits listener err', err));
-
-    compKitsTable.addEventListener('click', async (e)=>{
-      const btn = e.target.closest('button'); if(!btn) return;
-      const id = btn.dataset.id; if(btn.dataset.action === 'edit-ck2'){
-        const ref = doc(db,'kits','competitionKits','items',id);
-        const snap = await (await import('https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js')).getDoc(ref);
-        const data = snap.data(); editingCompKitId = id;
-        ck_name2.value = data.name||''; ck_category.value = data.category||''; ck_quantity2.value = data.quantity||0; ck_condition2.value = data.condition||'Good'; ck_notes2.value = data.notes||'';
-        toggle(compKitForm,true);
-      } else if(btn.dataset.action === 'delete-ck2'){
-        if(confirm('Delete comp kit?')) { try{ await deleteDoc(doc(db,'kits','competitionKits','items',id)); } catch(err){ alert('Delete failed: '+err.message) } }
-      }
-    });
-
-    // ====== Refresh & Logout ======
-    refreshAll.addEventListener('click', ()=> alert('Realtime listeners are active — data updates automatically.'));
-    viewDashboardBtn.addEventListener('click', ()=> alert('Dashboard refreshed.'));
-
-    logoutBtn.addEventListener('click', async ()=> {
-      localStorage.removeItem('loggedInUser');
-      try{ await signOut(auth); } catch(e){ console.warn('signout err', e); }
-      window.location.href = 'login.html';
-    });
-
-    // ====== Charts (simple sample; you can replace with live data) ======
-    const barCtx = document.getElementById('barChart').getContext('2d');
-    const pieCtx = document.getElementById('pieChart').getContext('2d');
-    new Chart(barCtx, { type: 'bar', data: { labels:['Grade7','Grade8','Grade9'], datasets:[{ label:'Students', data:[24,20,15] }] } });
-    new Chart(pieCtx, { type:'pie', data:{ labels:['Raspberry Pi','Smart Traffic','AI Weather'], datasets:[{ data:[5,3,2] }] } });
-
-  </script>
+  <!-- Firebase and JS -->
+  <script type="module" src="JAVASCRIPT/dashboard.js"></script>
 </body>
 </html>
