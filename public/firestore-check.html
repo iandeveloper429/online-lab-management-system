@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Firestore Data Check</title>
+  <style>
+    body {
+      background: #0a1a2a;
+      color: #fff;
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+    h2 { color: #ffd700; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 30px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    th, td {
+      padding: 10px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    th {
+      background: rgba(255,215,0,0.8);
+      color: #003366;
+    }
+  </style>
+</head>
+<body>
+
+<h1>🔥 Firestore Reality Check</h1>
+<p>This page loads all collections from Firestore so you can confirm everything is stored correctly.</p>
+
+<h2>Users</h2>
+<table id="usersTable"></table>
+
+<h2>Messages</h2>
+<table id="messagesTable"></table>
+
+<h2>Lessons</h2>
+<table id="lessonsTable"></table>
+
+<h2>Class Kits</h2>
+<table id="classKitsTable"></table>
+
+<h2>Assigned Classes</h2>
+<table id="assignedClassesTable"></table>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+  import {
+    getFirestore, collection, getDocs, doc, getDoc
+  } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+
+  // TODO: Replace with your Firebase config
+  const firebaseConfig = {
+    apiKey: "YOUR_KEY",
+    authDomain: "YOUR_DOMAIN",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_BUCKET",
+    messagingSenderId: "YOUR_ID",
+    appId: "YOUR_APP_ID"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  // Helper to build tables
+  function renderTable(elementId, dataArray) {
+    const table = document.getElementById(elementId);
+    if (dataArray.length === 0) {
+      table.innerHTML = "<tr><td>No data found.</td></tr>";
+      return;
+    }
+
+    let headerRow = "<tr>";
+    Object.keys(dataArray[0]).forEach(k => headerRow += `<th>${k}</th>`);
+    headerRow += "</tr>";
+
+    let rows = dataArray.map(obj => {
+      let row = "<tr>";
+      Object.values(obj).forEach(v => {
+        row += `<td>${typeof v === "object" ? JSON.stringify(v) : v}</td>`;
+      });
+      row += "</tr>";
+      return row;
+    }).join("");
+
+    table.innerHTML = headerRow + rows;
+  }
+
+  async function loadCollection(colName, tableId) {
+    const snap = await getDocs(collection(db, colName));
+    const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderTable(tableId, data);
+  }
+
+  async function loadAssignedClasses() {
+    const snap = await getDocs(collection(db, "classesAssigned"));
+    const result = snap.docs.map(d => ({ email: d.id, ...d.data() }));
+    renderTable("assignedClassesTable", result);
+  }
+
+  // Load everything
+  loadCollection("users", "usersTable");
+  loadCollection("messages", "messagesTable");
+  loadCollection("lessons", "lessonsTable");
+  loadCollection("classKits", "classKitsTable");
+  loadAssignedClasses();
+
+</script>
+
+</body>
+</html>
