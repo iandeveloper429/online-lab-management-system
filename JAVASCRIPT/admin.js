@@ -266,6 +266,9 @@ function setupRealtimeListeners() {
       });
     }, err => console.error('messages listener error:', err));
   }
+
+  // Load Inventory
+  loadInventory();
 }
 
 // ===== UI ACTIONS ======
@@ -288,12 +291,7 @@ function initUIActions() {
           createdAt: data.createdAt || new Date()
         });
         await deleteDoc(pendingRef);
-        await addDoc(collection(db,'messages'), {
-          from: loggedInUser.email,
-          to: data.teacherEmail,
-          content: `Your lesson for ${data.className} (lesson ${data.lessonNumber}) has been APPROVED.`,
-          date: new Date().toISOString()
-        });
+        await sendNotification(data.teacherEmail, `Your lesson for ${data.className} (lesson ${data.lessonNumber}) has been APPROVED.`);
         alert('Lesson approved and teacher notified.');
       }
 
@@ -306,12 +304,7 @@ function initUIActions() {
         const p = await getDoc(pendingRef);
         if (!p.exists()) return alert('Request not found');
         const data = p.data();
-        await addDoc(collection(db,'messages'), {
-          from: loggedInUser.email,
-          to: data.teacherEmail,
-          content: `Your lesson request for ${data.className} (lesson ${data.lessonNumber}) was REJECTED. ${reason ? 'Reason: ' + reason : ''}`,
-          date: new Date().toISOString()
-        });
+        await sendNotification(data.teacherEmail, `Your lesson request for ${data.className} (lesson ${data.lessonNumber}) was REJECTED. ${reason ? 'Reason: ' + reason : ''}`);
         await deleteDoc(pendingRef);
         alert('Lesson rejected and teacher notified.');
       }
@@ -407,212 +400,60 @@ function initControls() {
 
   const teacherFilter = document.getElementById('filterTeacher');
   if (teacherFilter) teacherFilter.addEventListener('change', async () => {
-    const email = teacherFilter.value;
-    if (!approvedTableBody) return;
-    approvedTableBody.innerHTML = '';
-    let snap;
-    if (!email) snap = await getDocs(query(collection(db,'lessons'), orderBy('createdAt','desc')));
-    else snap = await getDocs(query(collection(db,'lessons'), where('teacherEmail','==',email), orderBy('createdAt','desc')));
-    snap.forEach(d => {
-      const L = d.data();
-      const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${L.visitDate||''}</td><td>${L.teacherName}</td><td>${L.className}</td><td>${L.projectName}</td><td>${L.lessonNumber}</td><td>${L.startTime}-${L.endTime}</td>`;
-      approvedTableBody.appendChild(tr);
-    });
+    const val = teacherFilter.value;
+    const tbody = approvedTableBody;
+    if (!tbody) return;
+    const q = val ? query(collection(db,'lessons'), where('teacherEmail','==',val), orderBy('createdAt','desc')) : query(collection(db,'lessons'), orderBy('createdAt','desc'));
+    const snap = await getDocs(q);
+    tbody.innerHTML = '';
+    snap.forEach(d => { const v = d.data(); const tr = document.createElement('tr'); tr.innerHTML = `<td>${v.visitDate||''}</td><td>${v.teacherName}</td><td>${v.className}</td><td>${v.projectName}</td><td>${v.lessonNumber}</td><td>${v.startTime}-${v.endTime}</td>`; tbody.appendChild(tr); });
   });
 }
 
-// ===== EXTRA FEATURES: sidebar toggle + dark mode ======
+// ===== EXTRA FEATURES ======
 function initExtraFeatures() {
-  // Sidebar collapse
+  // sidebar toggle
+  const sidebarToggle = document.getElementById('sidebarToggle');
   const sidebar = document.querySelector('.sidebar');
-  const sidebarToggle = document.createElement('button');
-  sidebarToggle.textContent = '☰';
-  sidebarToggle.style.position = 'fixed';
-  sidebarToggle.style.top = '12px';
-  sidebarToggle.style.left = '12px';
-  sidebarToggle.style.zIndex = '100';
-  sidebarToggle.style.background = '#ffd700';
-  sidebarToggle.style.border = 'none';
-  sidebarToggle.style.padding = '6px 10px';
-  sidebarToggle.style.borderRadius = '6px';
-  sidebarToggle.style.cursor = 'pointer';
-  sidebarToggle.style.display = 'none';
-  document.body.appendChild(sidebarToggle);
+  if (sidebarToggle && sidebar) sidebarToggle.addEventListener('click', ()=> sidebar.classList.toggle('collapsed'));
 
-  function updateSidebarToggle() { sidebarToggle.style.display = window.innerWidth < 992 ? 'block' : 'none'; }
-  updateSidebarToggle();
-  window.addEventListener('resize', updateSidebarToggle);
-
-  sidebarToggle.addEventListener('click', () => {
-    sidebar.classList.toggle('collapsed');
-    if (sidebar.classList.contains('collapsed')) {
-      sidebar.style.width = '60px';
-      document.querySelectorAll('.sidebar .label').forEach(l => l.style.display = 'none');
-      document.querySelector('.main').style.marginLeft = '60px';
-    } else {
-      sidebar.style.width = '220px';
-      document.querySelectorAll('.sidebar .label').forEach(l => l.style.display = 'inline');
-      document.querySelector('.main').style.marginLeft = '220px';
-    }
-  });
-
-  // Dark / light mode toggle
-  const darkToggle = document.createElement('button');
-  darkToggle.textContent = '🌙';
-  darkToggle.style.position = 'fixed';
-  darkToggle.style.top = '12px';
-  darkToggle.style.right = '12px';
-  darkToggle.style.zIndex = '100';
-  darkToggle.style.background = '#ffd700';
-  darkToggle.style.border = 'none';
-  darkToggle.style.padding = '6px 10px';
-  darkToggle.style.borderRadius = '6px';
-  darkToggle.style.cursor = 'pointer';
-  document.body.appendChild(darkToggle);
-
-  let darkMode = true;
-  darkToggle.addEventListener('click', () => {
-    darkMode = !darkMode;
-    document.body.style.background = darkMode ? 'linear-gradient(135deg,#001f4d,#003366)' : '#f5f5f5';
-    document.body.style.color = darkMode ? '#fff' : '#000';
+  // dark mode
+  const darkModeToggle = document.getElementById('darkModeToggle');
+  if (darkModeToggle) darkModeToggle.addEventListener('click', ()=>{
+    document.body.classList.toggle('dark-mode');
   });
 }
 
-// ===== PIE CHART: Pending vs Approved ======
-async function updatePieChart() {
-  try {
-    const pendingSnap = await getDocs(collection(db,'pending_lessons'));
-    const approvedSnap = await getDocs(collection(db,'lessons'));
-    const data = [pendingSnap.size, approvedSnap.size];
-    if (pieCtx) {
-      if (pieChart) pieChart.destroy();
-      pieChart = new Chart(pieCtx, {
-        type: 'pie',
-        data: { labels:['Pending','Approved'], datasets:[{ data, backgroundColor:['#f44336','#4CAF50'] }] },
-        options:{ responsive:true }
-      });
-    }
-  } catch(e) { console.error('Pie chart error:', e); }
-}
- 
-
-// ===== INVENTORY TABLES ======
-const kitsTableBody = document.querySelector("#kitsTable tbody");
-const tabletKitsTableBody = document.querySelector("#tabletKitsTable tbody");
-const classKitsTableBody = document.querySelector("#classKitsTable tbody");
-const affectedTableBody = document.querySelector("#affectedTable tbody");
-const missingTableBody = document.querySelector("#missingTable tbody");
-
+// ===== INVENTORY ======
 async function loadInventory() {
-  try {
-    // General Kits
-    if (kitsTableBody) {
-      const snap = await getDocs(collection(db, "kits"));
-      kitsTableBody.innerHTML = "";
-      snap.forEach(doc => {
-        const d = doc.data();
-        kitsTableBody.innerHTML += `
-          <tr>
-            <td>${d.name}</td>
-            <td>${d.totalQuantity}</td>
-            <td>${d.availableQuantity}</td>
-            <td><button class="small-btn view-btn" onclick="alert('View ${d.name}')">View</button></td>
-          </tr>`;
-      });
-    }
-
-    // Tablet Kits
-    if (tabletKitsTableBody) {
-      const snap = await getDocs(collection(db, "tabletKits"));
-      tabletKitsTableBody.innerHTML = "";
-      snap.forEach(doc => {
-        const d = doc.data();
-        tabletKitsTableBody.innerHTML += `
-          <tr>
-            <td>${d.name}</td>
-            <td>${d.totalQuantity}</td>
-            <td>${d.availableQuantity}</td>
-          </tr>`;
-      });
-    }
-
-    // Class Kits
-    if (classKitsTableBody) {
-      const snap = await getDocs(collection(db, "classKits"));
-      classKitsTableBody.innerHTML = "";
-      snap.forEach(doc => {
-        const d = doc.data();
-        classKitsTableBody.innerHTML += `
-          <tr>
-            <td>${d.name}</td>
-            <td>${d.class}</td>
-            <td>${d.totalQuantity}</td>
-            <td>${d.availableQuantity}</td>
-          </tr>`;
-      });
-    }
-
-    // Affected / Damaged Kits
-    if (affectedTableBody) {
-      const snap = await getDocs(collection(db, "affectedKits"));
-      affectedTableBody.innerHTML = "";
-      snap.forEach(doc => {
-        const d = doc.data();
-        affectedTableBody.innerHTML += `
-          <tr>
-            <td>${d.name}</td>
-            <td>${d.type}</td>
-            <td>${d.notes}</td>
-            <td>${d.date}</td>
-          </tr>`;
-      });
-    }
-
-    // Missing Kit Components
-    if (missingTableBody) {
-      const snap = await getDocs(collection(db, "missingComponents"));
-      missingTableBody.innerHTML = "";
-      snap.forEach(doc => {
-        const d = doc.data();
-        missingTableBody.innerHTML += `
-          <tr>
-            <td>${d.componentName}</td>
-            <td>${d.kitName}</td>
-            <td>${d.notes}</td>
-            <td>${d.date}</td>
-          </tr>`;
-      });
-    }
-
-  } catch (err) {
-    console.error("Inventory load error:", err);
-  }
+  const invTableBody = document.querySelector('#inventoryTable tbody');
+  if (!invTableBody) return;
+  const snap = await getDocs(collection(db,'inventory'));
+  invTableBody.innerHTML = '';
+  snap.forEach(d => {
+    const item = d.data();
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${item.name}</td><td>${item.quantity}</td><td>${item.location}</td>`;
+    invTableBody.appendChild(tr);
+  });
 }
 
-// Call inventory loader inside setupRealtimeListeners to auto-update
-setupRealtimeListeners = (function(origFn){
-  return function() {
-    origFn();
-    loadInventory();
-  }
-})(setupRealtimeListeners);
+// ===== PIE CHART ======
+async function updatePieChart() {
+  if (!pieCtx) return;
+  const snap = await getDocs(collection(db,'lessons'));
+  const counts = {};
+  snap.forEach(d => { const l = d.data(); counts[l.className] = (counts[l.className]||0)+1; });
+  const labels = Object.keys(counts).slice(0,6);
+  const values = labels.map(l => counts[l]);
+  if (pieChart) pieChart.destroy();
+  pieChart = new Chart(pieCtx, { type:'pie', data:{labels, datasets:[{data:values, backgroundColor:['#f44336','#2196f3','#ff9800','#4caf50','#9c27b0','#00bcd4']}]}, options:{responsive:true} });
+}
 
-
-
-// ===== SEND NOTIFICATION =====
-async function sendNotification(to, message) {
-  if (!loggedInUser) return alert('Not logged in');
+// ===== SEND NOTIFICATION ======
+export async function sendNotification(toEmail, content) {
   try {
-    await addDoc(collection(db, 'messages'), {
-      from: loggedInUser.email,
-      to,
-      content: message,
-      date: new Date().toISOString()
-    });
-    alert('Notification sent!');
-  } catch(err) {
-    console.error(err);
-    alert('Failed to send notification: ' + err.message);
-  }
+    await addDoc(collection(db,'messages'), { from: loggedInUser.email, to: toEmail, content, date: new Date().toISOString() });
+    console.log('Notification sent to', toEmail);
+  } catch(err){ console.error('sendNotification error:', err);}
 }
